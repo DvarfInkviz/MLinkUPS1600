@@ -1,0 +1,588 @@
+html {
+  height: 100%;
+  font-family: "Tahoma";
+}
+body {
+    margin:0 auto;
+    padding: 0;
+    background: linear-gradient(#141e30, #243b55);
+    max-width: 1000px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: center;
+}
+
+body div {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 10px;
+    background: rgba(234,234,234,1);
+}
+
+.header {
+    color: #039;
+    height: 70px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    background: white;
+}
+
+.header-right {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    text-align: center;
+    flex-direction: column;
+    padding: 0;
+    background: white;
+}
+
+.flags {
+    width: 108px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-content: center;
+    background: white;
+}
+
+.flags img{
+    margin: 0;
+    padding: 1px;
+}
+
+h2 {
+    margin-block-start: 0px;
+    margin-block-end: 0px;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 50px;
+    width: 916px;
+}
+
+body div fieldset {
+    min-height: 30px;
+    font-size: 14px;
+    border-radius: 8px;
+    display:inline-block;
+    padding: 0 10px 2px 10px;
+}
+
+body div legend{
+    color: #06c;
+}
+
+button {
+  background: linear-gradient(0deg, #77ccfd 0%, #6cc3ee 100%);
+  border: none;
+}
+
+button:before {
+  height: 0%;
+  width: 2px;
+}
+
+button:hover {
+  box-shadow:  4px 4px 6px 0 rgba(255,255,255,.5),
+              -4px -4px 6px 0 rgba(116, 125, 136, .5),
+    inset -4px -4px 6px 0 rgba(255,255,255,.2),
+    inset 4px 4px 6px 0 rgba(0, 0, 0, .4);
+    cursor: pointer;
+}
+
+.big_stop {
+    width: 56px;
+    height: 97%;
+    background: #f33;
+    color: white;
+    border-radius: 8px;
+    padding: 0;
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+    font-size: 45px;
+    margin: 10px 0 5 0;
+}
+
+.big_stop:hover {
+    cursor: pointer;
+    box-shadow:  4px 4px 6px 0 rgba(255,255,255,.5),
+              -4px -4px 6px 0 rgba(116, 125, 136, .5),
+    inset -4px -4px 6px 0 rgba(255,255,255,.2),
+    inset 4px 4px 6px 0 rgba(0, 0, 0, .4);
+}
+
+.logs {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.log-sub {
+    width: 100%;
+    height: 25px;
+}
+
+input:invalid {
+    border-color: red;
+}
+
+input,
+input:valid {
+    border-color: #ccc;
+}
+
+.btn_set {
+    width: 100%;
+    padding: 8px;
+    border-radius: 5px;
+    margin: 3px 0;
+    font-size: 18px;
+}
+
+.btn_exit {
+    width: 70px;
+    padding: 5px;
+    border-radius: 5px;
+    margin: 3px;
+    background: #999;
+}
+
+.btn_cntrl {
+    padding: 5px;
+    border-radius: 5px;
+    margin: 3px 10px;
+    font-size: 20px;
+}
+
+.btn_pos {
+    width: 90%;
+    padding: 5px;
+    border-radius: 5px;
+    margin: 3px 10px;
+    font-size: 18px;
+}
+
+.btn_sett {
+    padding: 5px;
+    border-radius: 5px;
+    margin: 3px 0;
+    font-size: 14px;
+}
+
+.btn_man_pos {
+    width: 100px;
+    height: 100px;
+    padding: 0px;
+    border-radius: 5px;
+    margin: 3px;
+}
+
+.btn_stop {
+    width: 100px;
+    height: 100px;
+    padding: 5px;
+    border-radius: 5px;
+    margin: 3px 10px;
+    font-size: 20px;
+    position: relative;
+    top: 50%;
+    left: -50%;
+    transform: translate(50%, -50%);
+}
+
+.small_frame {
+    width: 40px;
+    height: 9px;
+    background: #999;
+    border-radius: 1px;
+    padding: 0;
+    margin: 0 5px;
+    border: 1px solid black;
+}
+
+.small_frame2 {
+    width: 70px;
+    height: 22px;
+    background: #999;
+    border-radius: 1px;
+    padding: 0;
+    margin: 0 9px;
+    border: 1px solid black;
+    text-align: center;
+}
+
+.small_frame3 {
+    width: 50px;
+    height: 9px;
+    background: #999;
+    border-radius: 1px;
+    padding: 0;
+    margin: 0 5px;
+    border: 1px solid black;
+}
+
+.p_err {
+    width: 88px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    display:inline-block;
+    text-align: center;
+}
+
+.p_pos {
+    width: 100px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    display:inline-block;
+    text-align: center;
+}
+
+.val {
+    width: 34%;
+    height: 32px;
+    margin: 0 15px;
+    padding: 0;
+    display:inline-block;
+    text-align: center;
+}
+
+.locrem {
+    background: #0f0;
+    border-radius: 1px;
+    padding: 5px;
+    margin: 0;
+    border: 1px solid black;
+}
+
+.led_status{
+    width: 20px;
+    height: 20px;
+    background: #999;
+    border-radius: 10px;
+    padding: 0;
+    margin: 0 10px 0 0;
+    border: 1px solid #999;
+    display:inline-block;
+}
+
+.err_status{
+    width: 20px;
+    height: 20px;
+    background: rgba(234,234,234,1);
+    border-radius: 20px;
+    padding: 0;
+    margin: 0 70px 8px 0;
+    border: 0px;
+}
+
+.plc_status {
+    height: 72px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+}
+
+.fieldset_status {
+    height: 56px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+}
+
+.current{
+    font-size: 34px;
+    width: 170px;
+    text-align: center;
+    padding: 0;
+}
+
+.position {
+    height: 378px;
+    width: 100%;
+}
+
+.positioin-fieldset {
+    float: left;
+    width: 97%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    text-align: center;
+    align-items: center;
+}
+
+.position-new {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    text-align: center;
+    float: left;
+    width: 36%;
+    height: 97%;
+}
+
+.position-goto {
+    width: 19%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+    height: 97%;
+}
+
+.position-man{
+    width: 36%;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    height: 97%;
+}
+
+.new_sub {
+    display: flex;
+    align-items: baseline;
+    text-align: center;
+    font-size: 20px;
+}
+
+.goto-button {
+    width: 100%;
+
+}
+
+.goto-button div{
+    width: 100%;
+}
+
+.position input {
+    width: 160px;
+    height: 42px;
+    margin: 0 0 0 15px;
+    padding: 0;
+    display:inline-block;
+    text-align: center;
+    font-size: 30px;
+}
+
+.err_settings input {
+    width: 130px;
+    height: 30px;
+    margin: 0 0 0 15px;
+    padding: 0;
+    display:inline-block;
+    text-align: center;
+    font-size: 20px;
+}
+
+.add_settings_limit input {
+    width: 80px;
+    height: 30px;
+    margin: 5px;
+    padding: 0;
+    display:inline-block;
+    text-align: center;
+    font-size: 20px;
+}
+
+.err_settings select{
+    width: 130px;
+    height: 30px;
+    text-align: center;
+    font-size: 20px;
+    margin: 0 0 0 15px;
+    padding: 0 0 0 15px;
+}
+
+.add_settings_antenna, .add_settings_receiver, .add_settings_limit {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+
+.err_settings {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    text-align: center;
+}
+
+.err_settings_sub {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    font-size: 13px;
+    padding: 0 0 10px 0;
+}
+
+.err_settings_text {
+    height: 0px;
+    padding-bottom: 0;
+}
+
+.control {
+    height: 177px;
+    text-align: right;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+}
+
+.sostoyanie {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    flex-wrap: nowrap;
+    width: 25%;
+    height: 95%;
+}
+
+.sostoyanie-sub {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: baseline;
+    padding: 0;
+    font-size: 15px;
+}
+
+.mng {
+    width: 73%;
+    height: 95%;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: row;
+}
+
+.settings {
+    height: 212px;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+}
+
+.settings-err {
+    width: 73%;
+    height: 95%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+}
+
+.err-sub {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0;
+}
+
+.err-top {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 0;
+    justify-content: space-around;
+    font-size: 15px;
+}
+
+.settings-set {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    flex-wrap: nowrap;
+}
+
+.add_settings-top {
+    width: 315px;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.add_settings-close {
+    padding: 2px;
+    margin: 0 0 0 281px;
+    border: 1px solid;
+    font-size: 10px;
+}
+
+.add_settings-close:hover {
+    cursor: pointer;
+}
+
+.exit {
+    height: 50px;
+}
+
+.footer {
+    clear: both;
+    color: #039;
+    height: 35px;
+    width: 100%;
+    text-align: left;
+    font-size: 12px;
+    color: black;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* -----------------------------------------
+  =CSS3 Loading animations
+-------------------------------------------- */
+.line {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 15px;
+  background-color: #141e30;
+}
+.load-1 .line:nth-last-child(1) {
+  animation: loadingA 1.5s 1s infinite;
+}
+.load-1 .line:nth-last-child(2) {
+  animation: loadingA 1.5s 0.5s infinite;
+}
+.load-1 .line:nth-last-child(3) {
+  animation: loadingA 1.5s 0s infinite;
+}
+@keyframes loadingA {
+  0 {
+    height: 15px;
+  }
+  50% {
+    height: 35px;
+  }
+  100% {
+    height: 15px;
+  }
+}

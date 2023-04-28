@@ -1,0 +1,256 @@
+html {
+  height: 100%;
+  font-family: "Tahoma";
+}
+body {
+    margin:0 auto;
+    padding: 0;
+    background: linear-gradient(#141e30, #243b55);
+    width: 177.7vh;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: center;
+}
+
+body div {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 1.38vh 1.38vh 0 1.38vh;
+    background: rgba(234,234,234,1);
+}
+
+img:hover {cursor: pointer;}
+
+.header {
+    color: #039;
+    height: 8vh;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    background: white;
+    font-size: 2.5vh;
+}
+
+.header-right {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    text-align: center;
+    flex-direction: column;
+    padding: 0;
+    background: white;
+}
+
+.flags {
+    width: 108px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-content: center;
+    background: white;
+}
+
+.flags img{
+    margin: 0;
+    padding: 1px;
+}
+
+.led_status{
+    width: 6.6vh;
+    height: 6.6vh;
+    background: #999;
+    border-radius: 1.38vh;
+    padding: 0;
+    margin: 1.38vh 1.38vh 0 0;
+    border: 0.13vh solid #999;
+    display:inline-block;
+}
+
+body div fieldset {
+    border-radius: 1vh;
+    display:inline-block;
+    padding: 0 1.38vh 0.27vh 1.38vh;
+}
+
+body div legend{
+    color: #06c;
+}
+
+button {
+  background: linear-gradient(0deg, #77ccfd 0%, #6cc3ee 100%);
+  border: none;
+}
+
+button:before {
+  height: 0%;
+  width: 2px;
+}
+
+button:hover {
+  box-shadow:  4px 4px 6px 0 rgba(255,255,255,.5),
+              -4px -4px 6px 0 rgba(116, 125, 136, .5),
+    inset -4px -4px 6px 0 rgba(255,255,255,.2),
+    inset 4px 4px 6px 0 rgba(0, 0, 0, .4);
+    cursor: pointer;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    height: 86vh;
+    width: 100%;
+}
+
+.users_list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.user_info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    border-bottom: 1px solid grey;
+    margin: 1.38vh 0;
+    align-items: center;
+}
+
+.user_key {
+    width: 25vh;
+    font-size: 2vh;
+}
+
+.user_key_small {
+    width: 6vh;
+}
+
+.login {
+    color: #063;
+}
+
+.add_box .user_box {
+    position: relative;
+    padding: 0;
+    border: 3px solid rgba(234,234,234,1);
+    font-size: 3.5vh;
+    text-align: center;
+    color: #039;
+}
+
+.add_box .user_box input {
+  width: 30vh;
+  padding: 1.7vh 0 0.4vh 0;
+  font-size: 2.5vh;
+  margin: 3vh 1vh;
+  border: none;
+  border-bottom: 1px solid #2779c0;
+  outline: none;
+  background: transparent;
+}
+
+.add_box .user_box label {
+  position: absolute;
+  top: 1.05vh;
+  left: 1vh;
+  padding: 1.2vh 0;
+  font-size: 2.5vh;
+  color: #2779c0;
+  pointer-events: none;
+  transition: .5s;
+}
+
+.add_box .user_box input:focus ~ label {
+  top: 0;
+  left: 1vh;
+  color: #2779c0;
+  font-size: 2vh;
+}
+
+.add_box .user_box button {
+    width: 12vh;
+    margin: 1vh;
+    height: 4vh;
+    font-size: 2vh;
+    color: #039;
+    font-weight: bold;
+}
+
+.add_box .user_box .choose-box {
+  position: relative;
+  width: 30vh;
+  height: 4vh;
+  font-size: 2vh;
+  margin: 1.2vh 0;
+  outline: 0;
+  border: 1px solid #2779c0;
+}
+
+.add_box .choose-label {
+    position: relative;
+    height: 6vh;
+    border: 3px solid rgba(234,234,234,1);
+    padding: 0;
+}
+
+.add_box .choose-label label {
+  position: absolute;
+  top: 1.05vh;
+  left: 1vh;
+  padding: 1.2vh 0;
+  font-size: 2.5vh;
+  color: #2779c0;
+}
+
+.add_box div {
+    border: none;
+}
+
+.pop_up {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,.5);
+  box-sizing: border-box;
+  box-shadow: 0 2vh 3vh rgba(0,0,0,.6);
+  z-index: 100;
+}
+
+.add_box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40vh;
+  padding: 4vh;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,.5);
+  box-sizing: border-box;
+  box-shadow: 0 2vh 3vh rgba(0,0,0,.6);
+  border-radius: 1.2vh;
+}
+
+.footer {
+    clear: both;
+    color: #039;
+    height: 6vh;
+    width: 100%;
+    text-align: left;
+    font-size: 2.5vh;
+    color: black;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}

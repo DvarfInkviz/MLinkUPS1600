@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+  "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <meta charset="UTF-8" content="">
+        <title>Система управления СУД ГоСТ-Крипт 2.0</title>
+        <link rel="shortcut icon" href="{{url_for('static',filename='MSlogo_44.ico')}}">
+        <link rel="stylesheet" href="{{url_for('static',filename='css/system.css')}}">
+        <script src="{{url_for('static',filename='scripts/bcrypt.js')}}"></script>
+        <script defer src="{{url_for('static',filename='scripts/jquery.js')}}" type="text/javascript"></script>
+        <script defer src="{{url_for('static',filename='scripts/jquery.inputmask.js')}}" type="text/javascript"></script>
+        <script defer src="{{url_for('static',filename='scripts/system.js')}}" type="text/javascript"></script>
+    </head>
+    <body>
+        <div class="header">
+            <img src="{{url_for('static',filename='MSlogo_44.ico')}}" alt="" style="padding: 0; margin: 0 0 0 5px; width: 5vh; height: 5vh;">
+            <h2>СУД ГоСТ-Крипт 2.0 - Администратор системы</h2>
+            <div class="header-right">
+                <a href=logout><button class="btn_exit">Выход</button></a>
+            </div>
+        </div>
+        <div class="main" id="main">
+            <fieldset class="user_field" id="user_field">
+                <legend style="text-align: left; font-size: 3vh;">Пользователи</legend>
+                <div class="users_list" style="overflow:auto;">
+                    <div class="user_info">
+                        <div class="user_key">ФИО</div>
+                        <div class="user_key">Логин</div>
+                        <div class="user_key">Роль</div>
+                        <div class="user_key">Время регистрации</div>
+                        <div class="user_key">Время последнего входа</div>
+                        <div class="user_key">IP клиента</div>
+                        <img src="{{url_for('static',filename='images/buttons/add_user.png')}}" onclick="return new_user.init('new');" alt="Добавить пользователя" style="width: 6vh; height: 6vh;">
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+        <div class="footer">
+            <p id="version">Микролинк-связь ООО &copy; &reg;, 2022, web_s.0.1, v.0.6</p>
+            <div id="current-date" style="padding: 0;"></div>
+        </div>
+    </body>
+</html>

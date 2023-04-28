@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="{{url_for('static',filename='MSlogo_44.ico')}}">
+  <meta charset="utf-8">
+  <title>Login Form</title>
+  <link rel="stylesheet" href="{{url_for('static',filename='css/login.css')}}">
+  <script src="{{url_for('static',filename='scripts/bcrypt.js')}}"></script>
+  <script defer src="{{url_for('static',filename='scripts/login.js')}}"></script>
+  <style>
+    .login-img {
+      display: block;
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+  <img class="login-img" id="login-img" style="top:50px" src="{{url_for('static',filename='MSlogo.png')}}" alt="">
+  <div class="login-box" id="login-box">
+    <h2>Подключиться</h2>
+    <form id="login_form" method="post">
+      <div class="user-box">
+        <input type="text" id="login" required="required">
+        <label>Логин</label>
+      </div>
+      <div class="user-box">
+        <input type="password" id="pwd" required="required">
+        <label>Пароль</label>
+      </div>
+      <div class="a-box">
+        <a onclick="return log_in();">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          Подключиться
+        </a>
+      </div>
+    </form>
+  </div>
+<!-- partial -->
+  
+</body>
+</html>

@@ -14,9 +14,9 @@
         <div class="header">
             <img src="{{url_for('static',filename='MSlogo_44.ico')}}" alt="" style="padding: 0; margin: 0 0 0 5px; width: 5vh; height: 5vh;">
             <h2>MLink - UPS 1600 - Система мониторинга</h2>
-            <div class="header-right">
-                <a href=logout><button class="btn_exit">Выход</button></a>
-            </div>
+<!--            <div class="header-right">-->
+<!--                <a href=logout><button class="btn_exit">Выход</button></a>-->
+<!--            </div>-->
         </div>
         <div class="main" id="main">
             <div class="main-buttons">
@@ -30,17 +30,6 @@
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden;" id="fs_1">
                     <legend style="text-align: left;">Журнал</legend>
-                    <fieldset id="scrambling" style="width: 55%; height: 98%; overflow: auto;">
-                        <legend style="text-align: left; font-size: 3vh;">Посервисное шифрование</legend>
-                    </fieldset>
-                    <fieldset style="width: 35%; height: 20vh;">
-                        <legend style="text-align: left; font-size: 3vh;">Передача данных</legend>
-                        <input type="text" id="send_data" style="width: 100%;">
-                        <button onclick="return send_data();" class="btn_data">Передать</button>
-                        <button onclick="return init();" class="btn_data">Init</button>
-                    </fieldset>
-<!--                    <input type="text" id="writefpga"><button onclick="return writefpga();">Write</button>-->
-<!--                    <input type="text" id="readfpga"><button onclick="return readfpga();">Read</button>-->
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_2">
                     <legend style="text-align: left;">Установки</legend>
@@ -49,7 +38,7 @@
                         <div>
                             <div>IP адрес:   192.168.1.52</div>
                             <div>Маска сети: 255.255.255.0</div>
-                            <div>Шлюз:       192.168.1.1</div>
+                            <div>Шлюз:       192.168.1.111</div>
                         </div>
                         <div><img class="pid_key_small" src="{{url_for('static',filename='images/buttons/ip_set.png')}}" alt="Изменить ip" style="width: 5vh; height: 5vh;"></div>
 <!--                        onclick="return new_ip.init();"-->
@@ -59,7 +48,7 @@
         </div>
         <div class="footer">
             <p id="version">Микролинк-связь ООО &copy; &reg;, 2023, web_m.0.1, v.0.1</p>
-            <a href=logout><button class="btn_exit">Выход</button></a>
+<!--            <a href=logout><button class="btn_exit">Выход</button></a>-->
             <div id="current-date" style="padding: 0;"></div>
         </div>
     </body>

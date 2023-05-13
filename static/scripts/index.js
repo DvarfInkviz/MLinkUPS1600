@@ -13,16 +13,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if(response.ok) {
             response.json()
             .then(function(response) {
-                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2022, '+ response.version + ' - ' + response.login + ' - DevID:0x' + response.cid;
-                show_fieldset(0);
-                show_fieldset(1);
-                if (response.priority == 1) {
-                    var nodes = document.getElementById("main-base").getElementsByTagName('*');
-                    for(var i = 0; i < nodes.length; i++){
-                         nodes[i].disabled = true;
-                    }
-                    document.getElementById('main-base').disabled = true;
-                }
+                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version;
+//                show_fieldset(0);
+//                show_fieldset(1);
+//                if (response.priority == 1) {
+//                    var nodes = document.getElementById("main-base").getElementsByTagName('*');
+//                    for(var i = 0; i < nodes.length; i++){
+//                         nodes[i].disabled = true;
+//                    }
+//                    document.getElementById('main-base').disabled = true;
+//                }
             })
         }
     })

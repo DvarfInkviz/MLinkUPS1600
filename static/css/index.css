@@ -316,6 +316,7 @@ button:hover {
     display: flex;
     text-align: center;
     margin: 1.38vh 0;
+    justify-content: space-between;
 }
 
 .mshu {

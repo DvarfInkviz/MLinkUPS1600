@@ -15,21 +15,25 @@ CREATE TABLE users (
     ip TEXT DEFAULT ''
 );
 
-DROP TABLE IF EXISTS plc_settings;
+DROP TABLE IF EXISTS ups_settings;
 
-CREATE TABLE plc_settings (
+CREATE TABLE ups_settings (
     id INTEGER PRIMARY KEY,
-    az_max TEXT DEFAULT '360.0',
-    az_min TEXT DEFAULT '0.0',
-    el_max TEXT DEFAULT '360.0',
-    el_min TEXT DEFAULT '0.0',
-    pl_max TEXT DEFAULT '180.0',
-    pl_min TEXT DEFAULT '-180.0',
-    satellite INTEGER DEFAULT 1,
-    ss_name TEXT DEFAULT '',
-    ss_d TEXT DEFAULT '3.5',
-    ss_lat TEXT DEFAULT '55.91',
-    ss_lon TEXT DEFAULT '30.25',
-    ss_alt TEXT DEFAULT '110',
-    mode INTEGER DEFAULT 1
+    u_akb_min TEXT DEFAULT '44.0',
+    u_akb_max TEXT DEFAULT '58.0',
+    i_akb_min TEXT DEFAULT '2730',
+    i_akb_max TEXT DEFAULT '2958',
+    u_abc_min TEXT DEFAULT '180.0',
+    u_abc_max TEXT DEFAULT '240.0',
+    u_abc_alarm_min TEXT DEFAULT '120.0',
+    u_abc_alarm_max TEXT DEFAULT '260.0',
+    u_load_max TEXT DEFAULT '4000',
+    i_load_max TEXT DEFAULT '90'
+    t_charge_max TEXT DEFAULT '20',
+    discharge_abc TEXT DEFAULT '10',
+    discharge_akb TEXT DEFAULT '70',
+    t_delay TEXT DEFAULT '100',
+    q_akb TEXT DEFAULT '200',
+    i_charge_max TEXT DEFAULT '20',
+    u_load_abc TEXT DEFAULT '48'
 );

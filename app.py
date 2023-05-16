@@ -18,12 +18,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 def lcd_init():
     # Initialise display
-    lcd_byte(0x33, LCD_CMD)  # 110011 Initialise
-    lcd_byte(0x32, LCD_CMD)  # 110010 Initialise
-    lcd_byte(0x06, LCD_CMD)  # 000110 Cursor move direction
+    lcd_byte(0x30, LCD_CMD)  # 110000 Initialise
+    lcd_byte(0x02, LCD_CMD)  # 000010 Initialise
+    # lcd_byte(0x32, LCD_CMD)  # 110010 Initialise
+    # lcd_byte(0x06, LCD_CMD)  # 000110 Cursor move direction
     lcd_byte(0x0C, LCD_CMD)  # 001100 Display On,Cursor Off, Blink Off
-    lcd_byte(0x28, LCD_CMD)  # 101000 Data length, number of lines, font size
+    # lcd_byte(0x28, LCD_CMD)  # 101000 Data length, number of lines, font size
     lcd_byte(0x01, LCD_CMD)  # 000001 Clear display
+    lcd_byte(LCD_LINE_1, LCD_CMD)  # 10000000 переход на 1 строку
     time.sleep(E_DELAY)
 
 
@@ -121,9 +123,9 @@ def adc_stm(state, values):
         s.write(b'C')
     asw = s.readline().decode("utf-8")[:-1].split(sep=' ')
     if (state == 'zero') and (len(asw) == 2):
+        to_status_log(msg=f"STM zero => {str(asw)}")
         values['iakb1_0'] = int(asw[0]) * 3.6 / 4095
         values['iakb2_0'] = int(asw[1]) * 3.6 / 4095
-        # lcd_string(f"I0={values['iakb1_0']:.2f} {values['iakb2_0']:.2f}", LCD_LINE_2)
         scheduler.remove_job(job_id='adc_stm')
         time.sleep(2)
         scheduler.add_job(func=adc_stm, args=['current', status_values], trigger='interval',
@@ -132,11 +134,14 @@ def adc_stm(state, values):
         to_status_log(msg=f"STM => {str(asw)}")
         values['iakb1'] = int(asw[0]) * 3.6 / 4095
         values['iakb2'] = int(asw[1]) * 3.6 / 4095
+        values['uakb1'] = int(asw[2]) * 3.6 / 4095
+        values['uakb2'] = int(asw[3]) * 3.6 / 4095
+        values['uakb3'] = int(asw[4]) * 3.6 / 4095
         values['uakb4'] = int(asw[5]) * 3.6 / 4095
+        values['uakb2_1'] = int(asw[6]) * 3.6 / 4095
+        values['uakb2_2'] = int(asw[7]) * 3.6 / 4095
+        values['uakb2_3'] = int(asw[8]) * 3.6 / 4095
         values['uakb2_4'] = int(asw[9]) * 3.6 / 4095
-        # lcd_string(f"I={values['iakb1']:.2f} {values['iakb2']:.2f}", LCD_LINE_1)
-        # lcd_string(f"U={values['uakb4']:.2f} {values['uakb2_4']:.2f}", LCD_LINE_2)
-        # scheduler.remove_job(job_id='adc_stm')
     else:
         to_status_log(msg=f"STM => {asw}")
     s.close()
@@ -164,25 +169,37 @@ def menu(values):
     clk.direction = digitalio.Direction.INPUT
     dt = digitalio.DigitalInOut(board.pin.PC1)
     dt.direction = digitalio.Direction.INPUT
-    # btn = digitalio.DigitalInOut(board.pin.PC2)
-    # btn.direction = digitalio.Direction.INPUT
 
     counter0 = 0
     counter = 0
-    clkLastState = clk.value
+    clk_last_state = clk.value
+    dt_last_state = dt.value
 
     while True:
-        clkState = clk.value
-        dtState = dt.value
-        # btn_state = btn.value
-        if clkState != clkLastState:
-            if dtState != clkState:
-                counter += 1
-            else:
-                counter -= 1
-            # print(counter)
-        clkLastState = clkState
-        if counter - counter0 > 2 and values["submenu"] < values[f"sub_cnt{values['menu']}"]:
+        clk_state = clk.value
+        dt_state = dt.value
+        # if (clk_state != clk_last_state) or (dt_state != dt_last_state):
+        #     to_status_log(msg=f'clk: {clk_last_state} -> {clk_state}; dt: {dt_last_state} -> {dt_state}')
+        if clk_last_state and dt_last_state and clk_state and not dt_state:
+            counter -= 1
+        elif clk_last_state and not dt_last_state and not clk_state and not dt_state:
+            counter -= 1
+        elif not clk_last_state and not dt_last_state and not clk_state and dt_state:
+            counter -= 1
+        elif not clk_last_state and dt_last_state and clk_state and dt_state:
+            counter -= 1
+        elif not clk_last_state and not dt_last_state and clk_state and not dt_state:
+            counter += 1
+        elif clk_last_state and not dt_last_state and clk_state and dt_state:
+            counter += 1
+        elif clk_last_state and dt_last_state and not clk_state and dt_state:
+            counter += 1
+        elif not clk_last_state and dt_last_state and not clk_state and not dt_state:
+            counter += 1
+        clk_last_state = clk_state
+        dt_last_state = dt_state
+        if counter - counter0 > 2:
+            to_status_log(msg=f'RightRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
                 if values["submenu"] == 0 and values["i_load_max"] < 90:
                     values["i_load_max"] += 1
@@ -193,18 +210,20 @@ def menu(values):
                 if values["submenu"] == 2 and values["discharge_akb"] < 70:
                     values["discharge_akb"] += 10
                     status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
-                if values["submenu"] == 3 and values["tdelay"] < 500:
-                    values["tdelay"] += 1
-                    status_values['menu_4_3'] = f'Protection time:;{status_values["tdelay"]}ms'
-            else:
+                if values["submenu"] == 3 and values["t_delay"] < 500:
+                    values["t_delay"] += 1
+                    status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
+            elif values["submenu"] < values[f"sub_cnt{values['menu']}"]:
                 values["submenu"] = values["submenu"] + 1
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
-            # lcd_string(f'{datetime.now().strftime("%H:%M %d.%m.%Y")}', LCD_LINE_1)
-            # lcd_string(f'{values["menu"]} - {values["submenu"]} - {btn_state}', LCD_LINE_2)
+            if values['edit']:
+                lcd_byte(LCD_LINE_2, LCD_CMD)  # переход на 2 строку
+                lcd_byte(0x0F, LCD_CMD)  # 001111 мигающий курсор
             to_status_log(msg=f'Right: {values["menu"]} - {values["submenu"]} - {values["edit"]}')
             counter0 = counter
-        elif values["submenu"] > 0 and counter - counter0 < -2:
+        elif counter - counter0 < -2:
+            to_status_log(msg=f'LeftRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
                 if values["submenu"] == 0 and values["i_load_max"] > 1:
                     values["i_load_max"] -= 1
@@ -215,18 +234,21 @@ def menu(values):
                 if values["submenu"] == 2 and values["discharge_akb"] > 10:
                     values["discharge_akb"] -= 10
                     status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
-                if values["submenu"] == 3 and values["tdelay"] > 1:
-                    values["tdelay"] -= 1
-                    status_values['menu_4_3'] = f'Protection time:;{status_values["tdelay"]}ms'
-            else:
+                if values["submenu"] == 3 and values["t_delay"] > 1:
+                    values["t_delay"] -= 1
+                    status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
+            elif values["submenu"] > 0:
                 values["submenu"] = values["submenu"] - 1
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
-            # lcd_string(f'{datetime.now().strftime("%H:%M %d.%m.%Y")}', LCD_LINE_1)
-            # lcd_string(f'{values["menu"]} - {values["submenu"]} - {btn_state}', LCD_LINE_2)
+            if values['edit']:
+                lcd_byte(LCD_LINE_2, LCD_CMD)  # переход на 2 строку
+                lcd_byte(0x0F, LCD_CMD)  # 001111 мигающий курсор
             to_status_log(msg=f'Left: {values["menu"]} - {values["submenu"]} - {values["edit"]}')
             counter0 = counter
-        time.sleep(0.01)
+        # else:
+        #     to_status_log(msg=f'Rotate: {counter0 - counter}')
+        time.sleep(0.005)
 
 
 def press(values):
@@ -238,25 +260,29 @@ def press(values):
             push += 1
         else:
             if push > 0:
-                to_status_log(msg=f'btn unpress - counter={push}')
+                to_status_log(msg=f'btn unpress - counter={push} - {values["edit"]}')
             if push > 45:
                 if values['edit'] and values['menu'] == 4:
                     values['edit'] = False
+                    lcd_byte(LCD_LINE_1, LCD_CMD)  # переход на 1 строку
+                    lcd_byte(0x0C, LCD_CMD)  # 001100 нормальный режим работы
                 if not values['edit'] and 0 < values['menu']:
                     values['submenu'] = values['menu']
                     values['menu'] = 0
                     lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
                     lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
-                to_status_log(msg=f'Btn press: {values["menu"]} - {values["submenu"]}')
+                to_status_log(msg=f'Btn press: {values["menu"]} - {values["submenu"]} - {values["edit"]}')
             elif push > 0:
                 if values['menu'] == 4 and not values['edit']:
                     values['edit'] = True
+                    lcd_byte(LCD_LINE_2, LCD_CMD)  # переход на 2 строку
+                    lcd_byte(0x0F, LCD_CMD)  # 001111 мигающий курсор
                 if values['menu'] == 0 and 0 < values['submenu'] < 6:
                     values['menu'] = values['submenu']
                     values['submenu'] = 0
                     lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
                     lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
-                to_status_log(msg=f'Btn press: {values["menu"]} - {values["submenu"]}')
+                to_status_log(msg=f'Btn press: {values["menu"]} - {values["submenu"]} - {values["edit"]}')
             #         мигающий курсор
             push = 0
         time.sleep(0.005)
@@ -273,9 +299,10 @@ status_values = {'iakb1_0': 0, 'iakb2_0': 0, 'iakb1': 0, 'iakb2': 0, 'uakb1': 0,
                  'uinv1': 0, 'uinv2': 0, 'uinv3': 0, 'uinv4': 0, 'uinv5': 0, 'uinv6': 0, 'uc': 220, 'Takb': 0,
                  'u_akb_min': ups_set[1], 'u_akb_max': ups_set[2], 'i_akb_min': ups_set[3], 'i_akb_max': ups_set[4],
                  'u_abc_min': ups_set[5], 'u_abc_max': ups_set[6], 'u_abc_alarm_min': ups_set[7],
-                 'u_abc_alarm_max': ups_set[8], 'u_load_max': ups_set[9], 'i_load_max': ups_set[10],
-                 't_charge_max': ups_set[11], 'discharge_abc': ups_set[12], 'discharge_akb': ups_set[13],
-                 't_delay': ups_set[14], 'q_akb': ups_set[15], 'i_charge_max': ups_set[16], 'u_load_abc': ups_set[17],
+                 'u_abc_alarm_max': ups_set[8], 'u_load_max': int(ups_set[9]), 'i_load_max': int(ups_set[10]),
+                 't_charge_max': ups_set[11], 'discharge_abc': ups_set[12], 'discharge_akb': int(ups_set[13]),
+                 't_delay': int(ups_set[14]), 'q_akb': ups_set[15], 'i_charge_max': ups_set[16],
+                 'u_load_abc': ups_set[17],
                  'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 3,
                  'sub_cnt5': 0, 'edit': False,
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}',
@@ -332,7 +359,7 @@ LCD_WIDTH = 16  # Maximum characters per line
 # Define some device constants
 LCD_CHR = 1  # Mode - Sending data
 LCD_CMD = 0  # Mode - Sending command
-LCD_SETCGRAMADDR = 0x40
+# LCD_SETCGRAMADDR = 0x40
 LCD_LINE_1 = 0x80  # LCD RAM address for the 1st line
 LCD_LINE_2 = 0xC0  # LCD RAM address for the 2nd line
 
@@ -356,8 +383,22 @@ lcd_string(status_values['menu_0_0'].split(sep=';')[1], LCD_LINE_2)
 if scheduler.get_job(job_id='start_stm') is None:
     scheduler.add_job(func=start_stm, trigger='interval', seconds=1, id='start_stm', replace_existing=True)
 time.sleep(1)
-scheduler.add_job(func=menu, args=[status_values], id='menu', replace_existing=True)
-scheduler.add_job(func=press, args=[status_values], id='press', replace_existing=True)
+if scheduler.get_job(job_id='menu') is None:
+    scheduler.add_job(func=menu, args=[status_values], id='menu', trigger='interval', seconds=1, coalesce=True,
+                      replace_existing=False)
+else:
+    scheduler.remove_job(job_id='menu')
+    time.sleep(0.2)
+    scheduler.add_job(func=menu, args=[status_values], id='menu', trigger='interval', seconds=1, coalesce=True,
+                      replace_existing=False)
+if scheduler.get_job(job_id='press') is None:
+    scheduler.add_job(func=press, args=[status_values], id='press', trigger='interval', seconds=1, coalesce=True,
+                      replace_existing=False)
+else:
+    scheduler.remove_job(job_id='press')
+    time.sleep(0.2)
+    scheduler.add_job(func=press, args=[status_values], id='press', trigger='interval', seconds=1, coalesce=True,
+                      replace_existing=False)
 
 
 @app.route("/login/", methods=("GET", "POST"), strict_slashes=False)
@@ -448,6 +489,40 @@ def index():
             return {
                 'connection': 'on',
                 'version': 'arm.0.1, mcu.0.1',
+            }
+        if json_data['action'] == 'status':
+            return {
+                'connection': 'on',
+                'u_akb_min': status_values['u_akb_min'],
+                'u_akb_max': status_values['u_akb_max'],
+                'i_akb_min': status_values['i_akb_min'],
+                'i_akb_max': status_values['i_akb_max'],
+                'u_abc_min': status_values['u_abc_min'],
+                'u_abc_max': status_values['u_abc_max'],
+                'u_abc_alarm_min': status_values['u_abc_alarm_min'],
+                'u_abc_alarm_max': status_values['u_abc_alarm_max'],
+                'u_load_max': status_values['u_load_max'],
+                'i_load_max': status_values['i_load_max'],
+                't_charge_max': status_values['t_charge_max'],
+                'discharge_abc': status_values['discharge_abc'],
+                'discharge_akb': status_values['discharge_akb'],
+                't_delay': status_values['t_delay'],
+                'q_akb': status_values['q_akb'],
+                'i_charge_max': status_values['i_charge_max'],
+                'u_load_abc': status_values['u_load_abc'],
+                'time_zone': 3,
+                'iakb1_0': f'{status_values["iakb1_0"]:.2f}',
+                'iakb1': f'{status_values["iakb1"]:.2f}',
+                'iakb2_0': f'{status_values["iakb2_0"]:.2f}',
+                'iakb2': f'{status_values["iakb2"]:.2f}',
+                'uakb1': f'{status_values["uakb1"]:.2f}',
+                'uakb2': f'{status_values["uakb2"]:.2f}',
+                'uakb3': f'{status_values["uakb3"]:.2f}',
+                'uakb4': f'{status_values["uakb4"]:.2f}',
+                'uakb2_1': f'{status_values["uakb2_1"]:.2f}',
+                'uakb2_2': f'{status_values["uakb2_2"]:.2f}',
+                'uakb2_3': f'{status_values["uakb2_3"]:.2f}',
+                'uakb2_4': f'{status_values["uakb2_4"]:.2f}'
             }
 
     return render_template("index.html")

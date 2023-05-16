@@ -32,5 +32,6 @@ cur.execute("INSERT INTO users (created, login, password, fullname, job_title, p
              'Оператор', 2, '11111111')
             )
 
+cur.execute("INSERT INTO ups_settings (id) VALUES (?)", (1, ))
 connection.commit()
 connection.close()

@@ -21,12 +21,25 @@
         <div class="main" id="main">
             <div class="main-buttons">
                 <a href="#information" style="width: 100%;" onclick="return show_fieldset('0')" id="ah_0"><button class="btn_menu" id="btn_0">Состояние</button></a>
-                <a href="#man_control" style="width: 100%;" onclick="return show_fieldset('1')" id="ah_1"><button class="btn_menu" id="btn_1">Журнал</button></a>
-                <a href="#start_positioin" style="width: 100%;" onclick="return show_fieldset('2')" id="ah_2"><button class="btn_menu" id="btn_2">Установки</button></a>
+                <a href="#logs" style="width: 100%;" onclick="return show_fieldset('1')" id="ah_1"><button class="btn_menu" id="btn_1">Журнал</button></a>
+                <a href="#settings" style="width: 100%;" onclick="return show_fieldset('2')" id="ah_2"><button class="btn_menu" id="btn_2">Установки</button></a>
             </div>
             <div class="main-base" id="main-base" style="padding: 0 1.38vh;">
-                <fieldset class="base-fieldset" style="z-index: 100; justify-content: flex-start; background:url({{url_for('static',filename='images/web_bkg.png')}}) no-repeat;width:90%;height:90%;" id="fs_0">
+                <fieldset class="base-fieldset" style="z-index: 100; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_0">
+<!--                    background:url({{url_for('static',filename='images/web_bkg.png')}}) no-repeat;width:90%;height:90%;-->
                     <legend style="text-align: left;">Состояние</legend>
+                    <div class="new_sub">iakb1_0<input id="iakb1_0" type="text"></div>
+                    <div class="new_sub">iakb1<input id="iakb1" type="text"></div>
+                    <div class="new_sub">iakb2_0<input id="iakb2_0" type="text"></div>
+                    <div class="new_sub">iakb2<input id="iakb2" type="text"></div>
+                    <div class="new_sub">uakb1<input id="uakb1" type="text"></div>
+                    <div class="new_sub">uakb2<input id="uakb2" type="text"></div>
+                    <div class="new_sub">uakb3<input id="uakb3" type="text"></div>
+                    <div class="new_sub">uakb4<input id="uakb4" type="text"></div>
+                    <div class="new_sub">uakb2_1<input id="uakb2_1" type="text"></div>
+                    <div class="new_sub">uakb2_2<input id="uakb2_2" type="text"></div>
+                    <div class="new_sub">uakb2_3<input id="uakb2_3" type="text"></div>
+                    <div class="new_sub">uakb2_4<input id="uakb2_4" type="text"></div>
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden;" id="fs_1">
                     <legend style="text-align: left;">Журнал</legend>
@@ -44,24 +57,25 @@
 <!--                        onclick="return new_ip.init();"-->
                     </fieldset>
                     <fieldset style="width: 80vh;">
-                        <div class="new_sub">Глубина разряда АКБ при наличии входного напряжения<input id="discharge_abc" type="text" placeholder="xx%" onfocusout="check_input(this)"></div>
-                        <div class="new_sub">Глубина разряда АКБ при отсутствии входного напряжения<input id="discharge_akb" type="text" placeholder="xx%" onfocusout="check_input(this)"></div>
-                        <div class="new_sub">Максимальный ток нагрузки – ток отсечки<input id="i_load_max" type="text" placeholder="xxA" onfocusout="check_input(this)"></div>
+<!--                        onfocusout="check_input(this)"-->
+                        <div class="new_sub">Глубина разряда АКБ при наличии входного напряжения<input id="discharge_abc" type="text" placeholder="xx%"></div>
+                        <div class="new_sub">Глубина разряда АКБ при отсутствии входного напряжения<input id="discharge_akb" type="text" placeholder="xx%"></div>
+                        <div class="new_sub">Максимальный ток нагрузки – ток отсечки<input id="i_load_max" type="text" placeholder="xxA"></div>
                         <div class="new_sub">Время задержки срабатывания защиты при превышении тока нагрузки
-                            <select name="t_delay" id="t_delay" onchange="return change_timer();">
-                                  <option value=1>1 мс</option>
-                                  <option value=10>10 мс</option>
-                                  <option value=50>50 мс</option>
-                                  <option selected value=100>100 мс</option>
-                                  <option value=200>200 мс</option>
-                                  <option value=500>500 мс</option>
+                            <select name="t_delay" id="t_delay" onchange="">
+                                  <option value='1'>1 мс</option>
+                                  <option value='10'>10 мс</option>
+                                  <option value='50'>50 мс</option>
+                                  <option selected value='100'>100 мс</option>
+                                  <option value='200'>200 мс</option>
+                                  <option value='500'>500 мс</option>
                             </select>
                         </div>
-                        <div class="new_sub">Емкость АКБ<input id="q_akb" type="text" placeholder="xxxAч" onfocusout="check_input(this)"></div>
+                        <div class="new_sub">Емкость АКБ<input id="q_akb" type="text" placeholder="xxxA&#183;ч" onfocusout=""></div>
                         <div class="new_sub">Значение максимального тока заряда АКБ<input id="i_charge_max" type="text"></div>
-                        <div class="new_sub">Напряжение на выходе ИБП в случае работы без АКБ<input id="u_load_abc" type="text" placeholder="xxВ" onfocusout="check_input(this)"></div>
+                        <div class="new_sub">Напряжение на выходе ИБП в случае работы без АКБ<input id="u_load_abc" type="text" placeholder="xxВ" onfocusout=""></div>
                         <div class="new_sub">Часовой пояс
-                            <select name="time_zone" id="time_zone" onchange="return change_time_zone();">
+                            <select name="time_zone" id="time_zone" onchange="">
                                   <option value=0>0 ч</option>
                                   <option value=1>+1 ч</option>
                                   <option value=2>+2 ч</option>

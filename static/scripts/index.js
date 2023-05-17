@@ -153,6 +153,8 @@ function request_status() {
                     document.getElementById('uakb2_2').value = response.uakb2_2;
                     document.getElementById('uakb2_3').value = response.uakb2_3;
                     document.getElementById('uakb2_4').value = response.uakb2_4;
+                    document.getElementById('temp_akb').value = response.temp_akb;
+                    document.getElementById('temp_air').value = response.temp_air;
 //                }
 //                else {
 //                                    document.getElementById('led_status').style.background = '#f33';

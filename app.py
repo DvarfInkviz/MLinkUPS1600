@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 import sqlite3
 from flask import Flask, render_template, request, redirect, flash, url_for, session
+from w1thermsensor import W1ThermSensor
 # import subprocess
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -108,8 +109,9 @@ def get_db_connection():
     return connection
 
 
-def update_temp():
-    pass
+def update_temp(values):
+    values['temp1'] = values['w1temp'][0].get_temperature()
+    values['temp2'] = values['w1temp'][1].get_temperature()
 
 
 def adc_stm(state, values):
@@ -121,29 +123,30 @@ def adc_stm(state, values):
         s.write(b'Z')
     else:
         s.write(b'C')
-    asw = s.readline().decode("utf-8")[:-1].split(sep=' ')
+    stm_out = s.readline().decode("utf-8")[:-1]
+    asw = stm_out.split(sep=' ')
     if (state == 'zero') and (len(asw) == 2):
-        to_status_log(msg=f"STM zero => {str(asw)}")
-        values['iakb1_0'] = int(asw[0]) * 3.6 / 4095
-        values['iakb2_0'] = int(asw[1]) * 3.6 / 4095
+        to_status_log(msg=f"STM zero => {stm_out}")
+        values['iakb1_0'] = int(asw[0]) * 3.37 / 4095
+        values['iakb2_0'] = int(asw[1]) * 3.37 / 4095
         scheduler.remove_job(job_id='adc_stm')
         time.sleep(2)
         scheduler.add_job(func=adc_stm, args=['current', status_values], trigger='interval',
                           seconds=5, id='adc_stm', replace_existing=True)
     elif (state == 'current') and (len(asw) == 10):
-        to_status_log(msg=f"STM => {str(asw)}")
-        values['iakb1'] = int(asw[0]) * 3.6 / 4095
-        values['iakb2'] = int(asw[1]) * 3.6 / 4095
-        values['uakb1'] = int(asw[2]) * 3.6 / 4095
-        values['uakb2'] = int(asw[3]) * 3.6 / 4095
-        values['uakb3'] = int(asw[4]) * 3.6 / 4095
-        values['uakb4'] = int(asw[5]) * 3.6 / 4095
-        values['uakb2_1'] = int(asw[6]) * 3.6 / 4095
-        values['uakb2_2'] = int(asw[7]) * 3.6 / 4095
-        values['uakb2_3'] = int(asw[8]) * 3.6 / 4095
-        values['uakb2_4'] = int(asw[9]) * 3.6 / 4095
+        to_status_log(msg=f"STM => {stm_out}")
+        values['iakb1'] = int(asw[0]) * 3.37 / 4095
+        values['iakb2'] = int(asw[1]) * 3.37 / 4095
+        values['uakb1'] = int(asw[2]) * 3.37 / 4095
+        values['uakb2'] = int(asw[3]) * 3.37 / 4095
+        values['uakb3'] = int(asw[4]) * 3.37 / 4095
+        values['uakb4'] = int(asw[5]) * 3.37 / 4095
+        values['uakb2_1'] = int(asw[6]) * 3.37 / 4095
+        values['uakb2_2'] = int(asw[7]) * 3.37 / 4095
+        values['uakb2_3'] = int(asw[8]) * 3.37 / 4095
+        values['uakb2_4'] = int(asw[9]) * 3.37 / 4095
     else:
-        to_status_log(msg=f"STM => {asw}")
+        to_status_log(msg=f"STM => {stm_out}")
     s.close()
 
 
@@ -239,6 +242,8 @@ def menu(values):
                     status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
             elif values["submenu"] > 0:
                 values["submenu"] = values["submenu"] - 1
+            if values["menu"] == values["submenu"] == 0:
+                values['menu_0_0'] = f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}'
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
             if values['edit']:
@@ -288,6 +293,12 @@ def press(values):
         time.sleep(0.005)
 
 
+def lcd_time(values):
+    values['menu_0_0'] = f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}'
+    if values["menu"] == values["submenu"] == 0:
+        lcd_string(values[f'menu_0_0'].split(sep=';')[1], LCD_LINE_2)
+
+
 scheduler = BackgroundScheduler()
 scheduler.start()
 temp_time = 1
@@ -296,7 +307,9 @@ ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
 status_values = {'iakb1_0': 0, 'iakb2_0': 0, 'iakb1': 0, 'iakb2': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0,
                  'uakb2_1': 0, 'uakb2_2': 0, 'uakb2_3': 0, 'uakb2_4': 0, 'i_inv': 0, 'u_inv': 0, 'bat': 100, 't_bat': 2,
                  'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'iinv4': 0, 'iinv5': 0, 'iinv6': 0, 'ua': 220, 'ub': 220,
-                 'uinv1': 0, 'uinv2': 0, 'uinv3': 0, 'uinv4': 0, 'uinv5': 0, 'uinv6': 0, 'uc': 220, 'Takb': 0,
+                 'uinv1': 0, 'uinv2': 0, 'uinv3': 0, 'uinv4': 0, 'uinv5': 0, 'uinv6': 0, 'uc': 220, 'w1temp': [],
+                 'temp1': 0, 'temp1_id': '',  # temp akb
+                 'temp2': 0, 'temp2_id': '',  # air temp
                  'u_akb_min': ups_set[1], 'u_akb_max': ups_set[2], 'i_akb_min': ups_set[3], 'i_akb_max': ups_set[4],
                  'u_abc_min': ups_set[5], 'u_abc_max': ups_set[6], 'u_abc_alarm_min': ups_set[7],
                  'u_abc_alarm_max': ups_set[8], 'u_load_max': int(ups_set[9]), 'i_load_max': int(ups_set[10]),
@@ -337,7 +350,7 @@ status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uak
                             f'U4={status_values["uakb4"]}'
 status_values['menu_3_1'] = f'U5={status_values["uakb2_1"]} U6={status_values["uakb2_2"]};' \
                             f'U7={status_values["uakb2_3"]} U8={status_values["uakb2_4"]}'
-status_values['menu_3_2'] = f'Q={status_values["q_akb"]}Ah;T={status_values["Takb"]}'
+status_values['menu_3_2'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
 status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
 status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
 status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
@@ -379,7 +392,12 @@ to_log(f'!!!!!!!!App starts at {datetime.now()}')
 lcd_init()
 lcd_string(status_values['menu_0_0'].split(sep=';')[0], LCD_LINE_1)
 lcd_string(status_values['menu_0_0'].split(sep=';')[1], LCD_LINE_2)
-
+status_values['w1temp'] = W1ThermSensor.get_available_sensors()
+if len(status_values['w1temp']) == 2:
+    status_values['temp1_id'] = status_values['w1temp'][0].id
+    status_values['temp2_id'] = status_values['w1temp'][1].id
+    status_values['temp1'] = status_values['w1temp'][0].get_temperature()
+    status_values['temp2'] = status_values['w1temp'][1].get_temperature()
 if scheduler.get_job(job_id='start_stm') is None:
     scheduler.add_job(func=start_stm, trigger='interval', seconds=1, id='start_stm', replace_existing=True)
 time.sleep(1)
@@ -399,6 +417,22 @@ else:
     time.sleep(0.2)
     scheduler.add_job(func=press, args=[status_values], id='press', trigger='interval', seconds=1, coalesce=True,
                       replace_existing=False)
+if scheduler.get_job(job_id='lcd_time') is None:
+    scheduler.add_job(func=lcd_time, args=[status_values], id='lcd_time', trigger='interval', seconds=29,
+                      replace_existing=True)
+else:
+    scheduler.remove_job(job_id='lcd_time')
+    time.sleep(0.2)
+    scheduler.add_job(func=lcd_time, args=[status_values], id='lcd_time', trigger='interval', seconds=29,
+                      replace_existing=True)
+if scheduler.get_job(job_id='update_temp') is None:
+    scheduler.add_job(func=update_temp, args=[status_values], id='update_temp', trigger='interval', seconds=60,
+                      replace_existing=True)
+else:
+    scheduler.remove_job(job_id='update_temp')
+    time.sleep(0.2)
+    scheduler.add_job(func=update_temp, args=[status_values], id='update_temp', trigger='interval', seconds=29,
+                      replace_existing=True)
 
 
 @app.route("/login/", methods=("GET", "POST"), strict_slashes=False)
@@ -522,7 +556,9 @@ def index():
                 'uakb2_1': f'{status_values["uakb2_1"]:.2f}',
                 'uakb2_2': f'{status_values["uakb2_2"]:.2f}',
                 'uakb2_3': f'{status_values["uakb2_3"]:.2f}',
-                'uakb2_4': f'{status_values["uakb2_4"]:.2f}'
+                'uakb2_4': f'{status_values["uakb2_4"]:.2f}',
+                'temp_akb': f'{status_values["temp1"]:.1f}',
+                'temp_air': f'{status_values["temp2"]:.1f}'
             }
 
     return render_template("index.html")

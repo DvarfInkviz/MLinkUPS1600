@@ -13,8 +13,8 @@ from w1thermsensor import W1ThermSensor
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # TODO:
-#   1. create and connect to db
-#   2. save settings
+#   1. connect to db
+#   2. save settings in db
 
 
 def lcd_init():
@@ -24,7 +24,7 @@ def lcd_init():
     # lcd_byte(0x32, LCD_CMD)  # 110010 Initialise
     # lcd_byte(0x06, LCD_CMD)  # 000110 Cursor move direction
     lcd_byte(0x0C, LCD_CMD)  # 001100 Display On,Cursor Off, Blink Off
-    # lcd_byte(0x28, LCD_CMD)  # 101000 Data length, number of lines, font size
+    lcd_byte(0x28, LCD_CMD)  # 101000 Data length, number of lines, font size
     lcd_byte(0x01, LCD_CMD)  # 000001 Clear display
     lcd_byte(LCD_LINE_1, LCD_CMD)  # 10000000 переход на 1 строку
     time.sleep(E_DELAY)
@@ -115,39 +115,37 @@ def update_temp(values):
 
 
 def adc_stm(state, values):
+    # TODO try-exept for open serial port
     s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
                       xonxoff=False, rtscts=False, dsrdtr=False)
     s.reset_input_buffer()  # flush input buffer
     s.reset_output_buffer()
-    if state == 'zero':
-        s.write(b'Z')
-    else:
-        s.write(b'C')
-    stm_out = s.readline().decode("utf-8")[:-1]
-    asw = stm_out.split(sep=' ')
-    if (state == 'zero') and (len(asw) == 2):
-        to_status_log(msg=f"STM zero => {stm_out}")
-        values['iakb1_0'] = int(asw[0]) * 3.37 / 4095
-        values['iakb2_0'] = int(asw[1]) * 3.37 / 4095
-        scheduler.remove_job(job_id='adc_stm')
-        time.sleep(2)
-        scheduler.add_job(func=adc_stm, args=['current', status_values], trigger='interval',
-                          seconds=5, id='adc_stm', replace_existing=True)
-    elif (state == 'current') and (len(asw) == 10):
-        to_status_log(msg=f"STM => {stm_out}")
-        values['iakb1'] = int(asw[0]) * 3.37 / 4095
-        values['iakb2'] = int(asw[1]) * 3.37 / 4095
-        values['uakb1'] = int(asw[2]) * 3.37 / 4095
-        values['uakb2'] = int(asw[3]) * 3.37 / 4095
-        values['uakb3'] = int(asw[4]) * 3.37 / 4095
-        values['uakb4'] = int(asw[5]) * 3.37 / 4095
-        values['uakb2_1'] = int(asw[6]) * 3.37 / 4095
-        values['uakb2_2'] = int(asw[7]) * 3.37 / 4095
-        values['uakb2_3'] = int(asw[8]) * 3.37 / 4095
-        values['uakb2_4'] = int(asw[9]) * 3.37 / 4095
-    else:
-        to_status_log(msg=f"STM => {stm_out}")
-    s.close()
+    while True:
+        # TODO try-exept for read data
+        in_buf = list(s.read(size=33))
+        values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
+        values['iakb1'] = in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])
+        values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20
+        values['uakb2'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20
+        values['uakb3'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20
+        values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20
+        values['iinv1'] = (in_buf[22] * 256 + in_buf[23]) / 10
+        values['iinv2'] = (in_buf[26] * 256 + in_buf[27]) / 10
+        values['iinv3'] = (in_buf[30] * 256 + in_buf[31]) / 10
+        values['uc'] = in_buf[24]
+        values['ub'] = in_buf[28]
+        values['ua'] = in_buf[32]
+        stm_out = f"Код ошибки: E0_{in_buf[1]}, статус код: {in_buf[2]}, Iakb1_0 = {values['iakb1_0']}, "\
+                  f"Iakb1 = {values['iakb1']}, "\
+                  f"Uakb1 = {values['uakb1']}, "\
+                  f"Uakb2 = {values['uakb2']}, "\
+                  f"Uakb3 = {values['uakb3']}, "\
+                  f"Uakb4 = {values['uakb4']}, "\
+                  f"I1 = {values['iinv1']}, UC = {values['uc']}, "\
+                  f"I2 = {values['iinv2']}, UB = {values['ub']}, "\
+                  f"I3 = {values['iinv3']}, UA = {values['ua']}"
+        to_status_log(msg=f"STM else => {stm_out}")
+    # s.close()
 
 
 def start_stm():
@@ -204,18 +202,26 @@ def menu(values):
         if counter - counter0 > 2:
             to_status_log(msg=f'RightRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
+                _conn = get_db_connection()
                 if values["submenu"] == 0 and values["i_load_max"] < 90:
                     values["i_load_max"] += 1
+                    _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
                     status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
                 if values["submenu"] == 1 and values["u_load_max"] < 56:
                     values["u_load_max"] += 1
+                    _conn.execute('UPDATE ups_settings SET u_load_max = ? WHERE id =1', (str(values["u_load_max"]),))
                     status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
                 if values["submenu"] == 2 and values["discharge_akb"] < 70:
                     values["discharge_akb"] += 10
+                    _conn.execute('UPDATE ups_settings SET discharge_akb = ? WHERE id =1',
+                                  (str(values["discharge_akb"]),))
                     status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
                 if values["submenu"] == 3 and values["t_delay"] < 500:
                     values["t_delay"] += 1
+                    _conn.execute('UPDATE ups_settings SET t_delay = ? WHERE id =1', (str(values["t_delay"]),))
                     status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
+                _conn.commit()
+                _conn.close()
             elif values["submenu"] < values[f"sub_cnt{values['menu']}"]:
                 values["submenu"] = values["submenu"] + 1
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
@@ -228,18 +234,26 @@ def menu(values):
         elif counter - counter0 < -2:
             to_status_log(msg=f'LeftRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
+                _conn = get_db_connection()
                 if values["submenu"] == 0 and values["i_load_max"] > 1:
                     values["i_load_max"] -= 1
+                    _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
                     status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
                 if values["submenu"] == 1 and values["u_load_max"] > 44:
                     values["u_load_max"] -= 1
+                    _conn.execute('UPDATE ups_settings SET u_load_max = ? WHERE id =1', (str(values["u_load_max"]),))
                     status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
                 if values["submenu"] == 2 and values["discharge_akb"] > 10:
                     values["discharge_akb"] -= 10
+                    _conn.execute('UPDATE ups_settings SET discharge_akb = ? WHERE id =1',
+                                  (str(values["discharge_akb"]),))
                     status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
                 if values["submenu"] == 3 and values["t_delay"] > 1:
                     values["t_delay"] -= 1
+                    _conn.execute('UPDATE ups_settings SET t_delay = ? WHERE id =1', (str(values["t_delay"]),))
                     status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
+                _conn.commit()
+                _conn.close()
             elif values["submenu"] > 0:
                 values["submenu"] = values["submenu"] - 1
             if values["menu"] == values["submenu"] == 0:
@@ -295,6 +309,8 @@ def press(values):
 
 def lcd_time(values):
     values['menu_0_0'] = f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}'
+    values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0'
+    values['menu_5_0'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty'
     if values["menu"] == values["submenu"] == 0:
         lcd_string(values[f'menu_0_0'].split(sep=';')[1], LCD_LINE_2)
 
@@ -304,10 +320,9 @@ scheduler.start()
 temp_time = 1
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
-status_values = {'iakb1_0': 0, 'iakb2_0': 0, 'iakb1': 0, 'iakb2': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0,
-                 'uakb2_1': 0, 'uakb2_2': 0, 'uakb2_3': 0, 'uakb2_4': 0, 'i_inv': 0, 'u_inv': 0, 'bat': 100, 't_bat': 2,
-                 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'iinv4': 0, 'iinv5': 0, 'iinv6': 0, 'ua': 220, 'ub': 220,
-                 'uinv1': 0, 'uinv2': 0, 'uinv3': 0, 'uinv4': 0, 'uinv5': 0, 'uinv6': 0, 'uc': 220, 'w1temp': [],
+status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0,
+                 'i_inv': 0, 'u_inv': 0, 'bat': 100, 't_bat': 2,
+                 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
                  'temp1': 0, 'temp1_id': '',  # temp akb
                  'temp2': 0, 'temp2_id': '',  # air temp
                  'u_akb_min': ups_set[1], 'u_akb_max': ups_set[2], 'i_akb_min': ups_set[3], 'i_akb_max': ups_set[4],
@@ -398,8 +413,11 @@ if len(status_values['w1temp']) == 2:
     status_values['temp2_id'] = status_values['w1temp'][1].id
     status_values['temp1'] = status_values['w1temp'][0].get_temperature()
     status_values['temp2'] = status_values['w1temp'][1].get_temperature()
-if scheduler.get_job(job_id='start_stm') is None:
-    scheduler.add_job(func=start_stm, trigger='interval', seconds=1, id='start_stm', replace_existing=True)
+# if scheduler.get_job(job_id='start_stm') is None:
+#     scheduler.add_job(func=start_stm, trigger='interval', seconds=1, id='start_stm', replace_existing=True)
+if scheduler.get_job(job_id='adc_stm') is None:
+    scheduler.add_job(func=adc_stm, args=['zero', status_values], trigger='interval',
+                      seconds=1, id='adc_stm', replace_existing=True)
 time.sleep(1)
 if scheduler.get_job(job_id='menu') is None:
     scheduler.add_job(func=menu, args=[status_values], id='menu', trigger='interval', seconds=1, coalesce=True,
@@ -547,16 +565,10 @@ def index():
                 'time_zone': 3,
                 'iakb1_0': f'{status_values["iakb1_0"]:.2f}',
                 'iakb1': f'{status_values["iakb1"]:.2f}',
-                'iakb2_0': f'{status_values["iakb2_0"]:.2f}',
-                'iakb2': f'{status_values["iakb2"]:.2f}',
                 'uakb1': f'{status_values["uakb1"]:.2f}',
                 'uakb2': f'{status_values["uakb2"]:.2f}',
                 'uakb3': f'{status_values["uakb3"]:.2f}',
                 'uakb4': f'{status_values["uakb4"]:.2f}',
-                'uakb2_1': f'{status_values["uakb2_1"]:.2f}',
-                'uakb2_2': f'{status_values["uakb2_2"]:.2f}',
-                'uakb2_3': f'{status_values["uakb2_3"]:.2f}',
-                'uakb2_4': f'{status_values["uakb2_4"]:.2f}',
                 'temp_akb': f'{status_values["temp1"]:.1f}',
                 'temp_air': f'{status_values["temp2"]:.1f}'
             }

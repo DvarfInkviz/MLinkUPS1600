@@ -143,16 +143,10 @@ function request_status() {
                     document.getElementById('t_delay').value = response.t_delay;
                     document.getElementById('iakb1_0').value = response.iakb1_0;
                     document.getElementById('iakb1').value = response.iakb1;
-                    document.getElementById('iakb2_0').value = response.iakb2_0;
-                    document.getElementById('iakb2').value = response.iakb2;
                     document.getElementById('uakb1').value = response.uakb1;
                     document.getElementById('uakb2').value = response.uakb2;
                     document.getElementById('uakb3').value = response.uakb3;
                     document.getElementById('uakb4').value = response.uakb4;
-                    document.getElementById('uakb2_1').value = response.uakb2_1;
-                    document.getElementById('uakb2_2').value = response.uakb2_2;
-                    document.getElementById('uakb2_3').value = response.uakb2_3;
-                    document.getElementById('uakb2_4').value = response.uakb2_4;
                     document.getElementById('temp_akb').value = response.temp_akb;
                     document.getElementById('temp_air').value = response.temp_air;
 //                }

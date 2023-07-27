@@ -12,10 +12,6 @@ from w1thermsensor import W1ThermSensor
 # import subprocess
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# TODO:
-#   1. connect to db
-#   2. save settings in db
-
 
 def lcd_init():
     # Initialise display
@@ -122,20 +118,22 @@ def adc_stm(state, values):
     s.reset_output_buffer()
     while True:
         # TODO try-exept for read data
+        # TODO скользящее усреднение напряжения на АКБ и тока
         in_buf = list(s.read(size=33))
         values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
         values['iakb1'] = in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])
-        values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20
-        values['uakb2'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20
-        values['uakb3'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20
-        values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20
+        values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.023
+        values['uakb2'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * 1.023
+        values['uakb3'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * 1.023
+        values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * 1.023
         values['iinv1'] = (in_buf[22] * 256 + in_buf[23]) / 10
         values['iinv2'] = (in_buf[26] * 256 + in_buf[27]) / 10
         values['iinv3'] = (in_buf[30] * 256 + in_buf[31]) / 10
         values['uc'] = in_buf[24]
         values['ub'] = in_buf[28]
         values['ua'] = in_buf[32]
-        stm_out = f"Код ошибки: E0_{in_buf[1]}, статус код: {in_buf[2]}, Iakb1_0 = {values['iakb1_0']:.2f}, "\
+        stm_out = f"Код ошибки: E0_{hex(in_buf[1])[2:].upper()}, статус код: {hex(in_buf[2])[2:].upper()}, " \
+                  f"Iakb1_0 = {values['iakb1_0']}, "\
                   f"Iakb1 = {values['iakb1']:.2f}, "\
                   f"Uakb1 = {values['uakb1']:.2f}, "\
                   f"Uakb2 = {values['uakb2']:.2f}, "\
@@ -357,14 +355,14 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
 status_values['menu_0_2'] = f'Inverter;I={status_values["i_inv"]}A U={status_values["u_inv"]}V'
 status_values['menu_0_3'] = f'Battery - {status_values["bat"]}%;t charge - {status_values["t_bat"]}h'
 status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};I3={status_values["iinv3"]}'
-status_values['menu_2_1'] = f'U1={status_values["uinv1"]} U2={status_values["uinv2"]};U3={status_values["uinv3"]}'
-status_values['menu_2_2'] = f'I4={status_values["iinv4"]} I5={status_values["iinv5"]};I6={status_values["iinv6"]}'
-status_values['menu_2_3'] = f'U4={status_values["uinv4"]} U5={status_values["uinv5"]};U6={status_values["uinv6"]}'
+# status_values['menu_2_1'] = f'U1={status_values["uinv1"]} U2={status_values["uinv2"]};U3={status_values["uinv3"]}'
+# status_values['menu_2_2'] = f'I4={status_values["iinv4"]} I5={status_values["iinv5"]};I6={status_values["iinv6"]}'
+# status_values['menu_2_3'] = f'U4={status_values["uinv4"]} U5={status_values["uinv5"]};U6={status_values["uinv6"]}'
 status_values['menu_2_4'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
 status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uakb2"]};U3={status_values["uakb3"]} ' \
                             f'U4={status_values["uakb4"]}'
-status_values['menu_3_1'] = f'U5={status_values["uakb2_1"]} U6={status_values["uakb2_2"]};' \
-                            f'U7={status_values["uakb2_3"]} U8={status_values["uakb2_4"]}'
+# status_values['menu_3_1'] = f'U5={status_values["uakb2_1"]} U6={status_values["uakb2_2"]};' \
+#                             f'U7={status_values["uakb2_3"]} U8={status_values["uakb2_4"]}'
 status_values['menu_3_2'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
 status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
 status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
@@ -563,12 +561,15 @@ def index():
                 'i_charge_max': status_values['i_charge_max'],
                 'u_load_abc': status_values['u_load_abc'],
                 'time_zone': 3,
-                'iakb1_0': f'{status_values["iakb1_0"]:.2f}',
+                'iakb1_0': f'{status_values["iakb1_0"]}',
                 'iakb1': f'{status_values["iakb1"]:.2f}',
-                'uakb1': f'{status_values["uakb1"]:.2f}',
-                'uakb2': f'{status_values["uakb2"]:.2f}',
-                'uakb3': f'{status_values["uakb3"]:.2f}',
-                'uakb4': f'{status_values["uakb4"]:.2f}',
+                'uakb1': f'{status_values["uakb1"]:.1f}',
+                'uakb2': f'{status_values["uakb2"]:.1f}',
+                'uakb3': f'{status_values["uakb3"]:.1f}',
+                'uakb4': f'{status_values["uakb4"]:.1f}',
+                'ua': f'{status_values["ua"]}',
+                'ub': f'{status_values["ub"]}',
+                'uc': f'{status_values["uc"]}',
                 'temp_akb': f'{status_values["temp1"]:.1f}',
                 'temp_air': f'{status_values["temp2"]:.1f}'
             }

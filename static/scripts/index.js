@@ -147,6 +147,7 @@ function request_status() {
                     document.getElementById('uakb2').value = response.uakb2;
                     document.getElementById('uakb3').value = response.uakb3;
                     document.getElementById('uakb4').value = response.uakb4;
+                    document.getElementById('iload').value = response.iload;
                     document.getElementById('ua').value = response.ua;
                     document.getElementById('ub').value = response.ub;
                     document.getElementById('uc').value = response.uc;

@@ -116,9 +116,13 @@ def adc_stm(state, values):
                       xonxoff=False, rtscts=False, dsrdtr=False)
     s.reset_input_buffer()  # flush input buffer
     s.reset_output_buffer()
+    cnt_m = 100  # количество значений для усреднения
+    _m = 0
+    _m_list = [{}, {}, {}, {}, {}]
+    _first = True
     while True:
         # TODO try-exept for read data
-        # TODO скользящее усреднение напряжения на АКБ и тока
+        # TODO скользящее усреднение напряжения на АКБ и тока - надо проверить в действии
         in_buf = list(s.read(size=33))
         values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
         values['iakb1'] = in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])
@@ -132,6 +136,45 @@ def adc_stm(state, values):
         values['uc'] = in_buf[24]
         values['ub'] = in_buf[28]
         values['ua'] = in_buf[32]
+        values['iload'] = values['iinv1'] + values['iinv2'] +values['iinv3'] - values['iakb1']
+        if _first:
+            if _m < cnt_m-1:
+                _m_list[0][_m] = values['iakb1']
+                for _j in range(1, 5):
+                    _m_list[_j][_m] = values[f'uakb{_j}']
+                _m += 1
+            else:
+                _first = False
+                _m_list[0][_m] = values['iakb1']
+                for _j in range(1, 5):
+                    _m_list[_j][_m] = values[f'uakb{_j}']
+                _m = 0
+                _sum = [0, 0, 0, 0, 0]
+                for _i in range(0, cnt_m):
+                    for _j in range(0, 5):
+                        _sum[_j] += _m_list[_j][_i]
+                values['iakb1'] = _sum[0] / cnt_m
+                values['uakb1'] = _sum[1] / cnt_m
+                values['uakb2'] = _sum[2] / cnt_m
+                values['uakb3'] = _sum[3] / cnt_m
+                values['uakb4'] = _sum[4] / cnt_m
+        else:
+            if _m < cnt_m:
+                _m_list[0][_m] = values['iakb1']
+                for _j in range(1, 5):
+                    _m_list[_j][_m] = values[f'uakb{_j}']
+                _m += 1
+                _sum = [0, 0, 0, 0, 0]
+                for _i in range(0, cnt_m):
+                    for _j in range(0, 5):
+                        _sum[_j] += _m_list[_j][_i]
+                values['iakb1'] = _sum[0] / cnt_m
+                values['uakb1'] = _sum[1] / cnt_m
+                values['uakb2'] = _sum[2] / cnt_m
+                values['uakb3'] = _sum[3] / cnt_m
+                values['uakb4'] = _sum[4] / cnt_m
+            else:
+                _m = 0
         stm_out = f"Код ошибки: E0_{hex(in_buf[1])[2:].upper()}, статус код: {hex(in_buf[2])[2:].upper()}, " \
                   f"Iakb1_0 = {values['iakb1_0']}, "\
                   f"Iakb1 = {values['iakb1']:.2f}, "\
@@ -319,7 +362,7 @@ temp_time = 1
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
 status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0,
-                 'i_inv': 0, 'u_inv': 0, 'bat': 100, 't_bat': 2,
+                 'i_inv': 0, 'u_inv': 0, 'bat': 100, 't_bat': 2, 'iload': 0,
                  'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
                  'temp1': 0, 'temp1_id': '',  # temp akb
                  'temp2': 0, 'temp2_id': '',  # air temp
@@ -567,6 +610,7 @@ def index():
                 'uakb2': f'{status_values["uakb2"]:.1f}',
                 'uakb3': f'{status_values["uakb3"]:.1f}',
                 'uakb4': f'{status_values["uakb4"]:.1f}',
+                'iload': f'{status_values["iload"]:.2f}',
                 'ua': f'{status_values["ua"]}',
                 'ub': f'{status_values["ub"]}',
                 'uc': f'{status_values["uc"]}',

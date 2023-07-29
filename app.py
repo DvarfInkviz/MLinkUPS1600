@@ -116,13 +116,12 @@ def adc_stm(state, values):
                       xonxoff=False, rtscts=False, dsrdtr=False)
     s.reset_input_buffer()  # flush input buffer
     s.reset_output_buffer()
-    cnt_m = 100  # количество значений для усреднения
+    cnt_m = 50  # количество значений для усреднения
     _m = 0
-    _m_list = [{}, {}, {}, {}, {}]
+    _m_list = [{}, {}, {}, {}, {}, {}]
     _first = True
     while True:
         # TODO try-exept for read data
-        # TODO скользящее усреднение напряжения на АКБ и тока - надо проверить в действии
         in_buf = list(s.read(size=33))
         values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
         values['iakb1'] = in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])
@@ -136,43 +135,48 @@ def adc_stm(state, values):
         values['uc'] = in_buf[24]
         values['ub'] = in_buf[28]
         values['ua'] = in_buf[32]
-        values['iload'] = values['iinv1'] + values['iinv2'] +values['iinv3'] - values['iakb1']
+        values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] - values['iakb1']
         if _first:
             if _m < cnt_m-1:
                 _m_list[0][_m] = values['iakb1']
                 for _j in range(1, 5):
                     _m_list[_j][_m] = values[f'uakb{_j}']
+                _m_list[5][_m] = values['iload']
                 _m += 1
             else:
                 _first = False
                 _m_list[0][_m] = values['iakb1']
                 for _j in range(1, 5):
                     _m_list[_j][_m] = values[f'uakb{_j}']
+                _m_list[5][_m] = values['iload']
                 _m = 0
-                _sum = [0, 0, 0, 0, 0]
+                _sum = [0, 0, 0, 0, 0, 0]
                 for _i in range(0, cnt_m):
-                    for _j in range(0, 5):
+                    for _j in range(0, 6):
                         _sum[_j] += _m_list[_j][_i]
                 values['iakb1'] = _sum[0] / cnt_m
                 values['uakb1'] = _sum[1] / cnt_m
                 values['uakb2'] = _sum[2] / cnt_m
                 values['uakb3'] = _sum[3] / cnt_m
                 values['uakb4'] = _sum[4] / cnt_m
+                values['iload'] = _sum[5] / cnt_m
         else:
             if _m < cnt_m:
                 _m_list[0][_m] = values['iakb1']
                 for _j in range(1, 5):
                     _m_list[_j][_m] = values[f'uakb{_j}']
+                _m_list[5][_m] = values['iload']
                 _m += 1
-                _sum = [0, 0, 0, 0, 0]
+                _sum = [0, 0, 0, 0, 0, 0]
                 for _i in range(0, cnt_m):
-                    for _j in range(0, 5):
+                    for _j in range(0, 6):
                         _sum[_j] += _m_list[_j][_i]
                 values['iakb1'] = _sum[0] / cnt_m
                 values['uakb1'] = _sum[1] / cnt_m
                 values['uakb2'] = _sum[2] / cnt_m
                 values['uakb3'] = _sum[3] / cnt_m
                 values['uakb4'] = _sum[4] / cnt_m
+                values['iload'] = _sum[5] / cnt_m
             else:
                 _m = 0
         stm_out = f"Код ошибки: E0_{hex(in_buf[1])[2:].upper()}, статус код: {hex(in_buf[2])[2:].upper()}, " \
@@ -185,25 +189,25 @@ def adc_stm(state, values):
                   f"I1 = {values['iinv1']:.2f}, UC = {values['uc']}, "\
                   f"I2 = {values['iinv2']:.2f}, UB = {values['ub']}, "\
                   f"I3 = {values['iinv3']:.2f}, UA = {values['ua']}"
-        to_status_log(msg=f"STM else => {stm_out}")
+        to_status_log(msg=f"STM => {stm_out}")
     # s.close()
 
 
-def start_stm():
-    s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
-                      xonxoff=False, rtscts=False, dsrdtr=False)
-    s.reset_input_buffer()  # flush input buffer
-    s.reset_output_buffer()
-    s.write(b'R')
-    asw = s.readline()
-    if asw == b"Status code 0x52 received!\n":
-        scheduler.remove_job(job_id='start_stm')
-        scheduler.add_job(func=adc_stm, args=['zero', status_values], trigger='interval',
-                          seconds=1, id='adc_stm', replace_existing=True)
-
-    else:
-        to_status_log(msg=f"STM => {asw}")
-    s.close()
+# def start_stm():
+#     s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
+#                       xonxoff=False, rtscts=False, dsrdtr=False)
+#     s.reset_input_buffer()  # flush input buffer
+#     s.reset_output_buffer()
+#     s.write(b'R')
+#     asw = s.readline()
+#     if asw == b"Status code 0x52 received!\n":
+#         scheduler.remove_job(job_id='start_stm')
+#         scheduler.add_job(func=adc_stm, args=['zero', status_values], trigger='interval',
+#                           seconds=1, id='adc_stm', replace_existing=True)
+#
+#     else:
+#         to_status_log(msg=f"STM => {asw}")
+#     s.close()
 
 
 def menu(values):
@@ -321,7 +325,7 @@ def press(values):
         else:
             if push > 0:
                 to_status_log(msg=f'btn unpress - counter={push} - {values["edit"]}')
-            if push > 45:
+            if push > 60:
                 if values['edit'] and values['menu'] == 4:
                     values['edit'] = False
                     lcd_byte(LCD_LINE_1, LCD_CMD)  # переход на 1 строку
@@ -362,7 +366,7 @@ temp_time = 1
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
 status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0,
-                 'i_inv': 0, 'u_inv': 0, 'bat': 100, 't_bat': 2, 'iload': 0,
+                 'bat': 100, 't_bat': 2, 'iload': 0,
                  'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
                  'temp1': 0, 'temp1_id': '',  # temp akb
                  'temp2': 0, 'temp2_id': '',  # air temp
@@ -374,7 +378,7 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
                  'u_load_abc': ups_set[17],
                  'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 3,
                  'sub_cnt5': 0, 'edit': False,
-                 'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}',
+                 'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
                  'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0',
                  'menu_0_4': 'Settings; ', 'menu_0_5': 'Logs; ', 'menu_0_6': 'Operating up;time',
                  'menu_1_0': 'Ini error:;empty', 'menu_5_0': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty'}
@@ -395,18 +399,12 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
 # 15 q_akb TEXT DEFAULT '200',
 # 16 i_charge_max TEXT DEFAULT '20',
 # 17 u_load_abc TEXT DEFAULT '48'
-status_values['menu_0_2'] = f'Inverter;I={status_values["i_inv"]}A U={status_values["u_inv"]}V'
 status_values['menu_0_3'] = f'Battery - {status_values["bat"]}%;t charge - {status_values["t_bat"]}h'
 status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};I3={status_values["iinv3"]}'
-# status_values['menu_2_1'] = f'U1={status_values["uinv1"]} U2={status_values["uinv2"]};U3={status_values["uinv3"]}'
-# status_values['menu_2_2'] = f'I4={status_values["iinv4"]} I5={status_values["iinv5"]};I6={status_values["iinv6"]}'
-# status_values['menu_2_3'] = f'U4={status_values["uinv4"]} U5={status_values["uinv5"]};U6={status_values["uinv6"]}'
-status_values['menu_2_4'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
+status_values['menu_2_1'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
 status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uakb2"]};U3={status_values["uakb3"]} ' \
                             f'U4={status_values["uakb4"]}'
-# status_values['menu_3_1'] = f'U5={status_values["uakb2_1"]} U6={status_values["uakb2_2"]};' \
-#                             f'U7={status_values["uakb2_3"]} U8={status_values["uakb2_4"]}'
-status_values['menu_3_2'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
+status_values['menu_3_1'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
 status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
 status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
 status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
@@ -454,8 +452,6 @@ if len(status_values['w1temp']) == 2:
     status_values['temp2_id'] = status_values['w1temp'][1].id
     status_values['temp1'] = status_values['w1temp'][0].get_temperature()
     status_values['temp2'] = status_values['w1temp'][1].get_temperature()
-# if scheduler.get_job(job_id='start_stm') is None:
-#     scheduler.add_job(func=start_stm, trigger='interval', seconds=1, id='start_stm', replace_existing=True)
 if scheduler.get_job(job_id='adc_stm') is None:
     scheduler.add_job(func=adc_stm, args=['zero', status_values], trigger='interval',
                       seconds=1, id='adc_stm', replace_existing=True)

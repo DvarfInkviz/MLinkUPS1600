@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if(response.ok) {
             response.json()
             .then(function(response) {
-                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version;
+                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version + '.'+response.iakb1_0+'.'+response.uakb4_0;
 //                show_fieldset(0);
 //                show_fieldset(1);
 //                if (response.priority == 1) {
@@ -132,7 +132,8 @@ function request_status() {
         if(response.ok) {
             response.json()
             .then(function(response) {
-//                if (response.connection == 'on') {
+                if (response.connection == 'on') {
+                    document.getElementById('led_status').style.background = '#3f3';
                     document.getElementById('discharge_abc').value = response.discharge_abc+'%';
                     document.getElementById('discharge_akb').value = response.discharge_akb+'%';
                     document.getElementById('i_load_max').value = response.i_load_max+'A';
@@ -141,22 +142,60 @@ function request_status() {
                     document.getElementById('u_load_abc').value = response.u_load_abc+'B';
                     document.getElementById('time_zone').value = response.time_zone;
                     document.getElementById('t_delay').value = response.t_delay;
-                    document.getElementById('iakb1_0').value = response.iakb1_0;
-                    document.getElementById('iakb1').value = response.iakb1;
-                    document.getElementById('uakb1').value = response.uakb1;
-                    document.getElementById('uakb2').value = response.uakb2;
-                    document.getElementById('uakb3').value = response.uakb3;
-                    document.getElementById('uakb4').value = response.uakb4;
-                    document.getElementById('iload').value = response.iload;
-                    document.getElementById('ua').value = response.ua;
-                    document.getElementById('ub').value = response.ub;
-                    document.getElementById('uc').value = response.uc;
-                    document.getElementById('temp_akb').value = response.temp_akb;
-                    document.getElementById('temp_air').value = response.temp_air;
-//                }
-//                else {
-//                                    document.getElementById('led_status').style.background = '#f33';
-//                }
+                    document.getElementById('iakb1').textContent = response.iakb1+' A';
+                    document.getElementById('uakb1').textContent = response.uakb1+' B';
+                    document.getElementById('uakb2').textContent = response.uakb2+' B';
+                    document.getElementById('uakb3').textContent = response.uakb3+' B';
+                    document.getElementById('uakb4').textContent = response.uakb4+' B';
+                    document.getElementById('iload').textContent = response.iload+' A';
+                    document.getElementById('ua').textContent  = response.ua+' B';
+                    document.getElementById('ub').textContent  = response.ub+' B';
+                    document.getElementById('uc').textContent  = response.uc+' B';
+                    document.getElementById('tinv1').textContent  = response.tinv1+' \u00B0C';
+                    document.getElementById('tinv2').textContent  = response.tinv2+' \u00B0C';
+                    document.getElementById('tinv3').textContent  = response.tinv3+' \u00B0C';
+                    document.getElementById('temp_akb').textContent = response.temp_akb+' \u00B0C';
+                    document.getElementById('temp_air').textContent = response.temp_air+' \u00B0C';
+                    if (response.bv1_status == 'ok') {
+                        document.getElementById('bv1_status').classList.toggle('alerts-border', 0);
+                        document.getElementById('bv1_status').style.background = '#3f3';
+                    }
+                    if (response.bv2_status == 'ok') {
+                        document.getElementById('bv2_status').classList.toggle('alerts-border', 0);
+                        document.getElementById('bv2_status').style.background = '#3f3';
+                    }
+                    if (response.bv3_status == 'ok') {
+                        document.getElementById('bv3_status').classList.toggle('alerts-border', 0);
+                        document.getElementById('bv3_status').style.background = '#3f3';
+                    }
+                    if (response.bv1_status == 'alarm') {
+                        document.getElementById('bv1_status').classList.toggle('alerts-border', 1);
+                        document.getElementById('bv1_status').style.background = '#3f3';
+                    }
+                    if (response.bv2_status == 'alarm') {
+                        document.getElementById('bv2_status').classList.toggle('alerts-border', 1);
+                        document.getElementById('bv2_status').style.background = '#3f3';
+                    }
+                    if (response.bv3_status == 'alarm') {
+                        document.getElementById('bv3_status').classList.toggle('alerts-border', 1);
+                        document.getElementById('bv3_status').style.background = '#3f3';
+                    }
+                    if (response.bv1_status == 'error') {
+                        document.getElementById('bv1_status').classList.toggle('alerts-border', 1);
+                        document.getElementById('bv1_status').style.background = '#999';
+                    }
+                    if (response.bv2_status == 'error') {
+                        document.getElementById('bv2_status').classList.toggle('alerts-border', 1);
+                        document.getElementById('bv2_status').style.background = '#999';
+                    }
+                    if (response.bv3_status == 'error') {
+                        document.getElementById('bv3_status').classList.toggle('alerts-border', 1);
+                        document.getElementById('bv3_status').style.background = '#999';
+                    }
+                }
+                else {
+                    document.getElementById('led_status').style.background = '#f33';
+                }
             });
         }
         else {

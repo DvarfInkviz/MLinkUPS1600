@@ -56,6 +56,16 @@ img:hover {cursor: pointer;}
     display:inline-block;
 }
 
+.ping_status{
+    width: 2vh;
+    height: 2vh;
+    background: #999;
+    border-radius: 1.38vh;
+    padding: 0;
+    border: 0.13vh solid #999;
+    display:inline-block;
+}
+
 body div fieldset {
     border-radius: 1vh;
     display:inline-block;
@@ -164,6 +174,57 @@ button:hover {
     flex-wrap: wrap;
     justify-content: space-between;
 }
+
+.pcs {
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+}
+
+.akb {
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+}
+
+.ip {
+    height: 8vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+}
+
+.ip-fieldset {
+    width: 19.2%;
+    height: 11.7vh;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+}
+
+.pcs-fieldset {
+    width: 19.2%;
+    height: 11.7vh;
+    display: flex;
+    align-items: center;
+}
+
+.akb-fieldset {
+    width: 30%;
+    height: 11.7vh;
+    display: flex;
+    align-items: center;
+}
+
+.alerts-border {
+    border: 0.7vh #f33 solid;
+    width: 5.46vh;
+    height: 5.46vh;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink { 50% { border-color:#EAEAEA ; }  }
 
 .main-base legend {
     font-size: 4vh;

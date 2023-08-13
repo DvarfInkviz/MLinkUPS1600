@@ -208,6 +208,7 @@ def adc_stm(values):
             status_values['menu_3_0'] = f'U1={status_values["uakb1"]:.1f} U2={status_values["uakb2"]:.1f};' \
                                         f'U3={status_values["uakb3"]:.1f} U4={status_values["uakb4"]:.1f}'
             status_values['menu_3_1'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]:.1f}'
+            status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
         s_out = bytearray.fromhex(format(int(float(status_values['discharge_abc']) * 10), '04x') +
                                   format(int(float(status_values['discharge_akb']) * 10), '04x') +
                                   format(int(float(status_values['i_load_max']) * 10), '04x') +
@@ -276,10 +277,10 @@ def menu(values):
                     values["i_load_max"] += 1
                     _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
                     status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
-                if values["submenu"] == 1 and values["u_load_max"] < 56:
-                    values["u_load_max"] += 1
-                    _conn.execute('UPDATE ups_settings SET u_load_max = ? WHERE id =1', (str(values["u_load_max"]),))
-                    status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
+                if values["submenu"] == 1 and values["u_load_abc"] < 56:
+                    values["u_load_abc"] += 1
+                    _conn.execute('UPDATE ups_settings SET u_load_abc = ? WHERE id =1', (str(values["u_load_abc"]),))
+                    status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
                 if values["submenu"] == 2 and values["discharge_akb"] < 70:
                     values["discharge_akb"] += 10
                     _conn.execute('UPDATE ups_settings SET discharge_akb = ? WHERE id =1',
@@ -308,10 +309,10 @@ def menu(values):
                     values["i_load_max"] -= 1
                     _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
                     status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
-                if values["submenu"] == 1 and values["u_load_max"] > 44:
-                    values["u_load_max"] -= 1
-                    _conn.execute('UPDATE ups_settings SET u_load_max = ? WHERE id =1', (str(values["u_load_max"]),))
-                    status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
+                if values["submenu"] == 1 and values["u_load_abc"] > 44:
+                    values["u_load_abc"] -= 1
+                    _conn.execute('UPDATE ups_settings SET u_load_abc = ? WHERE id =1', (str(values["u_load_abc"]),))
+                    status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
                 if values["submenu"] == 2 and values["discharge_akb"] > 10:
                     values["discharge_akb"] -= 10
                     _conn.execute('UPDATE ups_settings SET discharge_akb = ? WHERE id =1',
@@ -440,7 +441,7 @@ status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uak
                             f'U4={status_values["uakb4"]}'
 status_values['menu_3_1'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
 status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
-status_values['menu_4_1'] = f'U load max:;{status_values["u_load_max"]}V'
+status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
 status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
 status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
 

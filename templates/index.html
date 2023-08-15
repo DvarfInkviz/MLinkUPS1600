@@ -28,24 +28,31 @@
                 <fieldset class="base-fieldset" style="z-index: 100; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_0">
 <!--                    background:url({{url_for('static',filename='images/web_bkg.png')}}) no-repeat;width:90%;height:90%;-->
                     <legend style="text-align: left;">Состояние</legend>
+                    <fieldset class="status">
+                        <legend style="text-align: left; font-size: 2vh;">Режим работы</legend>
+                        <div id="err_sts"></div>
+                    </fieldset>
                     <div class="pcs">
                         <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="pcs_0">
                             <legend style="text-align: left; font-size: 2vh;">БВ 1 - Фаза А</legend>
                             <fieldset class="led_status" id="bv1_status"></fieldset>
                             <div class="current" id="ua">0 B</div>
                             <div class="current" id="tinv1">0 &deg;С</div>
+                            <div class="current" id="iinv1">0 A</div>
                         </fieldset>
                         <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="pcs_1">
                             <legend style="text-align: left; font-size: 2vh;">БВ 2 - Фаза В</legend>
                             <fieldset class="led_status" id="bv2_status"></fieldset>
                             <div class="current" id="ub">0 B</div>
                             <div class="current" id="tinv2">0 &deg;С</div>
+                            <div class="current" id="iinv2">0 A</div>
                         </fieldset>
                         <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="pcs_2">
                             <legend style="text-align: left; font-size: 2vh;">БВ 3 - Фаза С</legend>
                             <fieldset class="led_status" id="bv3_status"></fieldset>
                             <div class="current" id="uc">0 B</div>
                             <div class="current" id="tinv3">0 &deg;С</div>
+                            <div class="current" id="iinv3">0 A</div>
                         </fieldset>
                     </div>
                     <div class="pcs">
@@ -56,6 +63,10 @@
                         <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="t_2">
                             <legend style="text-align: left; font-size: 2vh;">Температура в шкафу</legend>
                             <div class="current" id="temp_air" style="padding: 2vh;">0 &deg;С</div>
+                        </fieldset>
+                        <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="u_load">
+                            <legend style="text-align: left; font-size: 2vh;">Напряжение нагрузки</legend>
+                            <div class="current" id="uload" style="padding: 2vh;">0 B</div>
                         </fieldset>
                     </div>
 <!--                    <div class="new_sub" style="width: 60vh;">Напряжение на фазе А, В<input id="ua" type="text"></div>-->
@@ -70,11 +81,11 @@
 <!--                    <div class="new_sub" style="width: 60vh;">Температура на АКБ, &deg;С<input id="temp_akb" type="text"></div>-->
 <!--                    <div class="new_sub" style="width: 60vh;">Температура в шкафу, &deg;С<input id="temp_air" type="text"></div>-->
                     <div class="akb">
-                        <fieldset class="akb-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="akb1">
+                        <fieldset class="akb-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="iakb">
                             <legend style="text-align: left; font-size: 2vh;">Ток АКБ ("-" - заряд АКБ, "+" - разряд АКБ)</legend>
                             <div class="current" id="iakb1" style="padding: 2vh;">0 A</div>
                         </fieldset>
-                        <fieldset class="akb-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="akb2">
+                        <fieldset class="akb-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="i_load">
                             <legend style="text-align: left; font-size: 2vh;">Ток нагрузки</legend>
                             <div class="current" id="iload" style="padding: 2vh;">0 A</div>
                         </fieldset>
@@ -124,7 +135,7 @@
                         <div class="new_sub">Максимальный ток нагрузки – ток отсечки<input id="i_load_max" type="text" placeholder="xxA"></div>
                         <div class="new_sub">Время задержки срабатывания защиты при превышении тока нагрузки
                             <select name="t_delay" id="t_delay" onchange="">
-                                  <option value='1'>1 мс</option>
+                                  <option value='0'>1 мс</option>
                                   <option value='10'>10 мс</option>
                                   <option value='50'>50 мс</option>
                                   <option selected value='100'>100 мс</option>
@@ -157,7 +168,7 @@
         </div>
         <div class="footer">
             <p id="version">Микролинк-связь ООО &copy; &reg;, 2023</p>
-            <fieldset class="ping_status" id="led_status"></fieldset>
+            <fieldset class="ping_status" id="led_status" style="font-size: 2vh;"></fieldset>
 <!--            <a href=logout><button class="btn_exit">Выход</button></a>-->
             <div id="current-date" style="padding: 0;"></div>
         </div>

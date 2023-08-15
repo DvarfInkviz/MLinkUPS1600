@@ -115,6 +115,7 @@ function setPageTime() {
 // ----- //
 
 // UPDATE STATUS //
+var s_status;
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { setInterval(request_status, 800); }, 300);
               });
@@ -133,6 +134,44 @@ function request_status() {
             response.json()
             .then(function(response) {
                 if (response.connection == 'on') {
+                    switch (response.state) {
+                        case 0:
+                            s_status = "Работа от АКБ";
+                            break;
+                        case 1:
+                            s_status = "Работа от сети без АКБ";
+                            break;
+                        case 2:
+                            switch (response.status) {
+                                case 194:
+                                    s_status = "Буферный режим - заряд АКБ";
+                                    break;
+                                case 196:
+                                    s_status = "Буферный режим - АКБ заряжено";
+                                    break;
+                                default:
+                                    s_status = "Буферный режим - заряд АКБ";
+                            }
+                            break;
+                        case 3:
+                            switch (response.err) {
+                                case 64:
+                                    s_status = "Критическая ошибка - перегрузка по току!";
+                                    break;
+                                case 32:
+                                    s_status = "Критическая ошибка - перегрузка по напряжению!";
+                                    break;
+                                case 4:
+                                    s_status = "Критическая ошибка - датчик тока вышел из строя!";
+                                    break;
+                                case 128:
+                                    s_status = "Критическая ошибка - перегрев АКБ!";
+                                    break;
+                                default:
+                                    s_status = "Критическая ошибка";
+                            }
+                            break;
+                    }
                     document.getElementById('led_status').style.background = '#3f3';
                     document.getElementById('discharge_abc').value = response.discharge_abc+'%';
                     document.getElementById('discharge_akb').value = response.discharge_akb+'%';
@@ -142,11 +181,13 @@ function request_status() {
                     document.getElementById('u_load_abc').value = response.u_load_abc+'B';
                     document.getElementById('time_zone').value = response.time_zone;
                     document.getElementById('t_delay').value = response.t_delay;
+                    document.getElementById('err_sts').textContent = s_status;
                     document.getElementById('iakb1').textContent = response.iakb1+' A';
                     document.getElementById('uakb1').textContent = response.uakb1+' B';
                     document.getElementById('uakb2').textContent = response.uakb2+' B';
                     document.getElementById('uakb3').textContent = response.uakb3+' B';
                     document.getElementById('uakb4').textContent = response.uakb4+' B';
+                    document.getElementById('uload').textContent = response.uload+' B';
                     document.getElementById('iload').textContent = response.iload+' A';
                     document.getElementById('ua').textContent  = response.ua+' B';
                     document.getElementById('ub').textContent  = response.ub+' B';
@@ -154,8 +195,12 @@ function request_status() {
                     document.getElementById('tinv1').textContent  = response.tinv1+' \u00B0C';
                     document.getElementById('tinv2').textContent  = response.tinv2+' \u00B0C';
                     document.getElementById('tinv3').textContent  = response.tinv3+' \u00B0C';
+                    document.getElementById('iinv1').textContent  = response.iinv1+' A';
+                    document.getElementById('iinv2').textContent  = response.iinv2+' A';
+                    document.getElementById('iinv3').textContent  = response.iinv3+' A';
                     document.getElementById('temp_akb').textContent = response.temp_akb+' \u00B0C';
                     document.getElementById('temp_air').textContent = response.temp_air+' \u00B0C';
+                    document.getElementById('led_status').textContent = response.state+' - '+response.i_max_stm;
                     if (response.bv1_status == 'ok') {
                         document.getElementById('bv1_status').classList.toggle('alerts-border', 0);
                         document.getElementById('bv1_status').style.background = '#3f3';

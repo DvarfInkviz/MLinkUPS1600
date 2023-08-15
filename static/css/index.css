@@ -57,13 +57,14 @@ img:hover {cursor: pointer;}
 }
 
 .ping_status{
-    width: 2vh;
+    width: 8vh;
     height: 2vh;
     background: #999;
     border-radius: 1.38vh;
     padding: 0;
     border: 0.13vh solid #999;
-    display:inline-block;
+    display: flex;
+    justify-content: center;
 }
 
 body div fieldset {

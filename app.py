@@ -122,15 +122,24 @@ def adc_stm(values):
     _first = True
     while True:
         # TODO try-exept for read data
-        in_buf = list(s.read(size=57))
-        if len(in_buf) == 57:
+        in_buf = list(s.read(size=60))
+        if len(in_buf) == 60:
             to_status_log(str(in_buf))
+            values['err'] = in_buf[1]
+            values['status'] = in_buf[2]
             values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
-            values['iakb1'] = in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])
-            values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.023
-            values['uakb2'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * 1.023
-            values['uakb3'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * 1.023
-            values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * 1.023
+            values['iakb1'] = (in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])) / values['k_iakb']
+            values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.278
+            values['uakb2'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * 1.208 - values['uakb1']
+            values['uakb3'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * 1.189 - values['uakb2'] - \
+                              values['uakb1']
+            if values['uakb1'] == values['uakb2'] == values['uakb3'] == 0:
+                values['uakb4'] = 0
+            else:
+                values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u4'] - \
+                                  values['uakb3'] - values['uakb2'] - values['uakb1']
+            if values['uakb4'] < 0:
+                values['uakb4'] = 0
             values['uakb4_0'] = in_buf[22] * 256 + in_buf[23]
             # 24 - F1
             values['iinv1'] = (in_buf[26] * 256 + in_buf[25]) / 10
@@ -147,9 +156,11 @@ def adc_stm(values):
             values['uc'] = in_buf[50] * 256 + in_buf[49]
             values['tinv3'] = in_buf[51]
             values['einv3'] = (in_buf[53] * 256 + in_buf[52]) / 10
-            values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] - values['iakb1']
+            values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] + values['iakb1']
+            values['state'] = in_buf[57]
+            values['i_max_stm'] = in_buf[58] * 256 + in_buf[59]
             if _first:
-                if _m < cnt_m-1:
+                if _m < cnt_m - 1:
                     _m_list[0][_m] = values['iakb1']
                     for _j in range(1, 5):
                         _m_list[_j][_m] = values[f'uakb{_j}']
@@ -191,15 +202,16 @@ def adc_stm(values):
                     values['iload'] = _sum[5] / cnt_m
                 else:
                     _m = 0
+            values['uload'] = values['uakb1'] + values['uakb2'] + values['uakb3'] + values['uakb4']
             stm_out = f"Код ошибки: E0_{format(in_buf[1], '02x').upper()}, статус код: {hex(in_buf[2])[2:].upper()}, " \
-                      f"Iakb1_0 = {values['iakb1_0']}, "\
-                      f"Iakb1 = {values['iakb1']:.2f}, "\
-                      f"Uakb1 = {values['uakb1']:.2f}, "\
-                      f"Uakb2 = {values['uakb2']:.2f}, "\
-                      f"Uakb3 = {values['uakb3']:.2f}, "\
-                      f"Uakb4 = {values['uakb4']:.2f}, "\
-                      f"I1 = {values['iinv1']:.2f}, UC = {values['uc']}, "\
-                      f"I2 = {values['iinv2']:.2f}, UB = {values['ub']}, "\
+                      f"Iakb1_0 = {values['iakb1_0']}, " \
+                      f"Iakb1 = {values['iakb1']:.2f}, " \
+                      f"Uakb1 = {values['uakb1']:.2f}, " \
+                      f"Uakb2 = {values['uakb2']:.2f}, " \
+                      f"Uakb3 = {values['uakb3']:.2f}, " \
+                      f"Uakb4 = {values['uakb4']:.2f}, " \
+                      f"I1 = {values['iinv1']:.2f}, UC = {values['uc']}, " \
+                      f"I2 = {values['iinv2']:.2f}, UB = {values['ub']}, " \
                       f"I3 = {values['iinv3']:.2f}, UA = {values['ua']}"
             to_human_log(msg=f"STM => {stm_out}")
             status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};' \
@@ -213,7 +225,10 @@ def adc_stm(values):
                                   format(int(float(status_values['discharge_akb']) * 10), '04x') +
                                   format(int(float(status_values['i_load_max']) * 10), '04x') +
                                   format(int(float(status_values['u_load_abc']) * 10), '04x') +
-                                  format(int(float(status_values['i_charge_max']) * 10), '04x'))
+                                  format(int(float(status_values['i_charge_max']) * 10), '04x') +
+                                  format(int(float(status_values['k_u4']) * 1000), '04x') +
+                                  format(int(float(status_values['k_iakb']) * 10), '04x') +
+                                  format(int(float(status_values['t_delay']) / 10), '02x'))
         s.write(s_out)
     # s.close()
 
@@ -400,7 +415,7 @@ scheduler.start()
 temp_time = 1
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
-status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0,
+status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0, 'uload': 0,
                  'bat': 100, 't_bat': 2, 'iload': 0, 'tinv1': 0, 'tinv2': 0, 'tinv3': 0, 'einv1': 0, 'einv2': 0,
                  'einv3': 0, 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
                  'temp1': 0, 'temp1_id': '',  # temp akb
@@ -410,7 +425,7 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
                  'u_abc_alarm_max': ups_set[8], 'u_load_max': int(ups_set[9]), 'i_load_max': int(ups_set[10]),
                  't_charge_max': ups_set[11], 'discharge_abc': ups_set[12], 'discharge_akb': int(ups_set[13]),
                  't_delay': int(ups_set[14]), 'q_akb': ups_set[15], 'i_charge_max': ups_set[16],
-                 'u_load_abc': ups_set[17],
+                 'u_load_abc': ups_set[17], 'state': 0, 'i_max_stm': 0, 'k_u4': 1.016, 'k_iakb': 13.2,
                  'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 3,
                  'sub_cnt5': 0, 'edit': False,
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
@@ -619,6 +634,8 @@ def index():
         if json_data['action'] == 'status':
             return {
                 'connection': 'on',
+                'err': status_values['err'],
+                'status': status_values['status'],
                 'bv1_status': get_bv_status(u_bv=status_values['ua'], values=status_values),
                 'bv2_status': get_bv_status(u_bv=status_values['ub'], values=status_values),
                 'bv3_status': get_bv_status(u_bv=status_values['uc'], values=status_values),
@@ -646,12 +663,18 @@ def index():
                 'uakb3': f'{status_values["uakb3"]:.1f}',
                 'uakb4': f'{status_values["uakb4"]:.1f}',
                 'iload': f'{status_values["iload"]:.2f}',
+                'uload': f'{status_values["uload"]:.1f}',
                 'ua': f'{status_values["ua"]}',
                 'ub': f'{status_values["ub"]}',
                 'uc': f'{status_values["uc"]}',
+                'state': f'{status_values["state"]}',
+                'i_max_stm': f'{status_values["i_max_stm"]}',
                 'tinv1': f'{status_values["tinv1"]}',
                 'tinv2': f'{status_values["tinv2"]}',
                 'tinv3': f'{status_values["tinv3"]}',
+                'iinv1': f'{status_values["iinv1"]:.1f}',
+                'iinv2': f'{status_values["iinv2"]:.1f}',
+                'iinv3': f'{status_values["iinv3"]:.1f}',
                 'temp_akb': f'{status_values["temp1"]:.1f}',
                 'temp_air': f'{status_values["temp2"]:.1f}'
             }
@@ -751,5 +774,5 @@ def system():
         return redirect(url_for('login'))
 
 # sudo /bin/sed -i 's/address.*/address 192.168.1.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.1.111/' /etc/network/interfaces
-# sudo /bin/sed -i 's/ServerName.*/        ServerName 192.168.1.52/' /etc/apache2/sites-available/web-ups1600.conf
+# sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.8.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo service networking restart

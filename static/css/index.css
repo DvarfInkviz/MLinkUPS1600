@@ -131,6 +131,11 @@ button:hover {
     text-align: center;
 }
 
+.status {
+    width: 93.6vh;
+    height: 8vh;
+}
+
 .current {
     font-size: 3.5vh;
     padding: 0;

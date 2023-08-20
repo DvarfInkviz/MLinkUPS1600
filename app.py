@@ -116,7 +116,7 @@ def adc_stm(values):
                       xonxoff=False, rtscts=False, dsrdtr=False)
     s.reset_input_buffer()  # flush input buffer
     s.reset_output_buffer()
-    cnt_m = 50  # количество значений для усреднения
+    cnt_m = 10  # количество значений для усреднения
     _m = 0
     _m_list = [{}, {}, {}, {}, {}, {}]
     _first = True
@@ -128,7 +128,7 @@ def adc_stm(values):
             values['err'] = in_buf[1]
             values['status'] = in_buf[2]
             values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
-            values['iakb1'] = (in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])) / values['k_iakb']
+            values['iakb1'] = (in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])) / values['k_i_akb']
             values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.278
             values['uakb2'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * 1.208 - values['uakb1']
             values['uakb3'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * 1.189 - values['uakb2'] - \
@@ -136,7 +136,7 @@ def adc_stm(values):
             if values['uakb1'] == values['uakb2'] == values['uakb3'] == 0:
                 values['uakb4'] = 0
             else:
-                values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u4'] - \
+                values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u_akb'] - \
                                   values['uakb3'] - values['uakb2'] - values['uakb1']
             if values['uakb4'] < 0:
                 values['uakb4'] = 0
@@ -214,21 +214,29 @@ def adc_stm(values):
                       f"I2 = {values['iinv2']:.2f}, UB = {values['ub']}, " \
                       f"I3 = {values['iinv3']:.2f}, UA = {values['ua']}"
             to_human_log(msg=f"STM => {stm_out}")
-            status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};' \
-                                        f'I3={status_values["iinv3"]}'
-            status_values['menu_2_1'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
-            status_values['menu_3_0'] = f'U1={status_values["uakb1"]:.1f} U2={status_values["uakb2"]:.1f};' \
-                                        f'U3={status_values["uakb3"]:.1f} U4={status_values["uakb4"]:.1f}'
-            status_values['menu_3_1'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]:.1f}'
-            status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
-        s_out = bytearray.fromhex(format(int(float(status_values['discharge_abc']) * 10), '04x') +
-                                  format(int(float(status_values['discharge_akb']) * 10), '04x') +
-                                  format(int(float(status_values['i_load_max']) * 10), '04x') +
-                                  format(int(float(status_values['u_load_abc']) * 10), '04x') +
-                                  format(int(float(status_values['i_charge_max']) * 10), '04x') +
-                                  format(int(float(status_values['k_u4']) * 1000), '04x') +
-                                  format(int(float(status_values['k_iakb']) * 10), '04x') +
-                                  format(int(float(status_values['t_delay']) / 10), '02x'))
+            values['menu_2_0'] = f'I1={values["iinv1"]} I2={values["iinv2"]};I3={values["iinv3"]}'
+            values['menu_2_1'] = f'UA={values["ua"]} UB={values["ub"]};UC={values["uc"]}'
+            values['menu_3_0'] = f'U1={values["uakb1"]:.1f} U2={values["uakb2"]:.1f};U3={values["uakb3"]:.1f} ' \
+                                 f'U4={values["uakb4"]:.1f}'
+            values['menu_3_1'] = f'Q={values["q_akb"]}Ah;T={values["temp1"]:.1f}'
+            if values['temp1'] > 20:
+                values['discharge_abc'] = u_akb_dict[40][values['discharge_depth']]
+                values['discharge_akb'] = u_akb_dict[40][30]
+                values['u_akb_max'] = u_akb_dict[40][100]
+            else:
+                values['discharge_abc'] = u_akb_dict[0][values['discharge_depth']]
+                values['discharge_akb'] = u_akb_dict[0][30]
+                values['u_akb_max'] = u_akb_dict[0][100]
+        s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
+                                  format(int(float(values['discharge_akb']) * 10), '02x') +
+                                  format(int(float(values['i_load_max'])), '02x') +
+                                  format(int(float(values['u_akb_max']) * 10), '02x') +
+                                  format(int(float(values['u_abc_max'])), '02x') +
+                                  format(int(float(values['i_charge_max'])), '02x') +
+                                  format(int(float(values['k_u_akb']) * 1000), '04x') +
+                                  format(int(float(values['k_i_akb']) * 10), '04x') +
+                                  format(int(float(values['t_delay']) / 10), '02x'))
+        to_status_log(str(list(s_out)))
         s.write(s_out)
     # s.close()
 
@@ -288,23 +296,24 @@ def menu(values):
             to_status_log(msg=f'RightRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
                 _conn = get_db_connection()
-                if values["submenu"] == 0 and values["i_load_max"] < 90:
+                if values["submenu"] == 0 and values["i_load_max"] < 80:
                     values["i_load_max"] += 1
                     _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
-                    status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
-                if values["submenu"] == 1 and values["u_load_abc"] < 56:
-                    values["u_load_abc"] += 1
-                    _conn.execute('UPDATE ups_settings SET u_load_abc = ? WHERE id =1', (str(values["u_load_abc"]),))
-                    status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
-                if values["submenu"] == 2 and values["discharge_akb"] < 70:
-                    values["discharge_akb"] += 10
-                    _conn.execute('UPDATE ups_settings SET discharge_akb = ? WHERE id =1',
-                                  (str(values["discharge_akb"]),))
-                    status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
-                if values["submenu"] == 3 and values["t_delay"] < 500:
-                    values["t_delay"] += 1
-                    _conn.execute('UPDATE ups_settings SET t_delay = ? WHERE id =1', (str(values["t_delay"]),))
-                    status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
+                    values['menu_4_0'] = f'I load max:;{values["i_load_max"]}A'
+                if values["submenu"] == 1 and values["i_charge_max"] < 20:
+                    values["i_charge_max"] += 1
+                    _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
+                                  (str(values["i_charge_max"]),))
+                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10}Ah'
+                if values["submenu"] == 2 and values["discharge_depth"] < 90:
+                    values["discharge_depth"] += 10
+                    _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
+                                  (str(values["discharge_depth"]),))
+                    values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]}%'
+                if values["submenu"] == 3 and values["u_abc_max"] < 55:
+                    values["u_abc_max"] += 1
+                    _conn.execute('UPDATE ups_settings SET u_abc_max = ? WHERE id =1', (str(values["u_abc_max"]),))
+                    values['menu_4_3'] = f'U load w/o AKB:;{values["u_abc_max"]}V'
                 _conn.commit()
                 _conn.close()
             elif values["submenu"] < values[f"sub_cnt{values['menu']}"]:
@@ -320,23 +329,24 @@ def menu(values):
             to_status_log(msg=f'LeftRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
                 _conn = get_db_connection()
-                if values["submenu"] == 0 and values["i_load_max"] > 1:
+                if values["submenu"] == 0 and values["i_load_max"] > 20:
                     values["i_load_max"] -= 1
                     _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
-                    status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
-                if values["submenu"] == 1 and values["u_load_abc"] > 44:
-                    values["u_load_abc"] -= 1
-                    _conn.execute('UPDATE ups_settings SET u_load_abc = ? WHERE id =1', (str(values["u_load_abc"]),))
-                    status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
-                if values["submenu"] == 2 and values["discharge_akb"] > 10:
-                    values["discharge_akb"] -= 10
-                    _conn.execute('UPDATE ups_settings SET discharge_akb = ? WHERE id =1',
-                                  (str(values["discharge_akb"]),))
-                    status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
-                if values["submenu"] == 3 and values["t_delay"] > 1:
-                    values["t_delay"] -= 1
-                    _conn.execute('UPDATE ups_settings SET t_delay = ? WHERE id =1', (str(values["t_delay"]),))
-                    status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
+                    values['menu_4_0'] = f'I load max:;{values["i_load_max"]}A'
+                if values["submenu"] == 1 and values["i_charge_max"] > 4:
+                    values["i_charge_max"] -= 1
+                    _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
+                                  (str(values["i_charge_max"]),))
+                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10}Ah'
+                if values["submenu"] == 2 and values["discharge_depth"] > 30:
+                    values["discharge_depth"] -= 10
+                    _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
+                                  (str(values["discharge_depth"]),))
+                    values['menu_4_2'] = f'Discharge depth:;{values["discharge_akb"]}%'
+                if values["submenu"] == 3 and values["u_abc_max"] > 44:
+                    values["u_abc_max"] -= 1
+                    _conn.execute('UPDATE ups_settings SET u_abc_max = ? WHERE id =1', (str(values["u_abc_max"]),))
+                    values['menu_4_3'] = f'U load w/o AKB:;{values["u_abc_max"]}V'
                 _conn.commit()
                 _conn.close()
             elif values["submenu"] > 0:
@@ -401,12 +411,12 @@ def lcd_time(values):
 
 
 def get_bv_status(u_bv, values):
-    if int(values['u_abc_min']) < u_bv < int(values['u_abc_max']):
+    if int(values['uabc_min']) < u_bv < int(values['uabc_max']):
         return 'ok'
     elif u_bv < int(values['u_abc_alarm_min']) or u_bv > int(values['u_abc_alarm_max']):
         return 'error'
-    elif (int(values['u_abc_alarm_min']) < u_bv < int(values['u_abc_min'])) or \
-            (int(values['u_abc_max']) < u_bv < int(values['u_abc_alarm_max'])):
+    elif (int(values['u_abc_alarm_min']) < u_bv < int(values['uabc_min'])) or \
+            (int(values['uabc_max']) < u_bv < int(values['u_abc_alarm_max'])):
         return 'alarm'
 
 
@@ -415,31 +425,26 @@ scheduler.start()
 temp_time = 1
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
+u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
+              40: {30: 13.2, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
 status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0, 'uload': 0,
                  'bat': 100, 't_bat': 2, 'iload': 0, 'tinv1': 0, 'tinv2': 0, 'tinv3': 0, 'einv1': 0, 'einv2': 0,
                  'einv3': 0, 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
                  'temp1': 0, 'temp1_id': '',  # temp akb
                  'temp2': 0, 'temp2_id': '',  # air temp
-                 'u_akb_min': ups_set[1], 'u_akb_max': ups_set[2], 'i_akb_min': ups_set[3], 'i_akb_max': ups_set[4],
-                 'u_abc_min': ups_set[5], 'u_abc_max': ups_set[6], 'u_abc_alarm_min': ups_set[7],
-                 'u_abc_alarm_max': ups_set[8], 'u_load_max': int(ups_set[9]), 'i_load_max': int(ups_set[10]),
+                 # 'u_akb_min': ups_set[1], 'u_akb_max': ups_set[2], 'i_akb_min': ups_set[3], 'i_akb_max': ups_set[4],
+                 'uabc_min': 180, 'uabc_max': 240, 'u_abc_alarm_min': 120, 'u_abc_alarm_max': 260,
+                 'u_akb_max': int(ups_set[9]), 'i_load_max': int(ups_set[10]),
                  't_charge_max': ups_set[11], 'discharge_abc': ups_set[12], 'discharge_akb': int(ups_set[13]),
-                 't_delay': int(ups_set[14]), 'q_akb': ups_set[15], 'i_charge_max': ups_set[16],
-                 'u_load_abc': ups_set[17], 'state': 0, 'i_max_stm': 0, 'k_u4': 1.016, 'k_iakb': 13.2,
+                 't_delay': int(ups_set[14]), 'q_akb': ups_set[15], 'i_charge_max': int(ups_set[16]),
+                 'u_abc_max': int(ups_set[17]), 'state': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2,
                  'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 3,
                  'sub_cnt5': 0, 'edit': False,
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
                  'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0',
                  'menu_0_4': 'Settings; ', 'menu_0_5': 'Logs; ', 'menu_0_6': 'Operating up;time',
-                 'menu_1_0': 'Ini error:;empty', 'menu_5_0': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty'}
-# 1 u_akb_min TEXT DEFAULT '44.0',
-# 2 u_akb_max TEXT DEFAULT '58.0',
-# 3 i_akb_min TEXT DEFAULT '2730',
-# 4 i_akb_max TEXT DEFAULT '2958',
-# 5 u_abc_min TEXT DEFAULT '180.0',
-# 6 u_abc_max TEXT DEFAULT '240.0',
-# 7 u_abc_alarm_min TEXT DEFAULT '120.0',
-# 8 u_abc_alarm_max TEXT DEFAULT '260.0',
+                 'menu_1_0': 'Ini error:;empty', 'menu_5_0': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty',
+                 'discharge_depth': int(ups_set[18])}
 # 9 u_load_max TEXT DEFAULT '4000',
 # 10 i_load_max TEXT DEFAULT '90'
 # 11 t_charge_max TEXT DEFAULT '20',
@@ -448,7 +453,8 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
 # 14 t_delay TEXT DEFAULT '100',
 # 15 q_akb TEXT DEFAULT '200',
 # 16 i_charge_max TEXT DEFAULT '20',
-# 17 u_load_abc TEXT DEFAULT '48'
+# 17 u_abc_max TEXT DEFAULT '48'
+# 18 discharge_depth TEXT DEFAULT '30'
 status_values['menu_0_3'] = f'Battery - {status_values["bat"]}%;t charge - {status_values["t_bat"]}h'
 status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};I3={status_values["iinv3"]}'
 status_values['menu_2_1'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
@@ -456,9 +462,10 @@ status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uak
                             f'U4={status_values["uakb4"]}'
 status_values['menu_3_1'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
 status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
-status_values['menu_4_1'] = f'U load max:;{status_values["u_load_abc"]}V'
-status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_akb"]}%'
-status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
+status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"]*10}Ah'
+status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]}%'
+status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]}V'
+# status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'xtkjdtxrb;bkbljkuj'
@@ -639,14 +646,14 @@ def index():
                 'bv1_status': get_bv_status(u_bv=status_values['ua'], values=status_values),
                 'bv2_status': get_bv_status(u_bv=status_values['ub'], values=status_values),
                 'bv3_status': get_bv_status(u_bv=status_values['uc'], values=status_values),
-                'u_akb_min': status_values['u_akb_min'],
-                'u_akb_max': status_values['u_akb_max'],
-                'i_akb_min': status_values['i_akb_min'],
-                'i_akb_max': status_values['i_akb_max'],
-                'u_abc_min': status_values['u_abc_min'],
-                'u_abc_max': status_values['u_abc_max'],
-                'u_abc_alarm_min': status_values['u_abc_alarm_min'],
-                'u_abc_alarm_max': status_values['u_abc_alarm_max'],
+                # 'u_akb_min': status_values['u_akb_min'],
+                # 'u_akb_max': status_values['u_akb_max'],
+                # 'i_akb_min': status_values['i_akb_min'],
+                # 'i_akb_max': status_values['i_akb_max'],
+                # 'u_min': status_values['u_min'],
+                # 'u_max': status_values['u_max'],
+                # 'u_abc_alarm_min': status_values['u_abc_alarm_min'],
+                # 'u_abc_alarm_max': status_values['u_abc_alarm_max'],
                 'u_load_max': status_values['u_load_max'],
                 'i_load_max': status_values['i_load_max'],
                 't_charge_max': status_values['t_charge_max'],
@@ -655,7 +662,7 @@ def index():
                 't_delay': status_values['t_delay'],
                 'q_akb': status_values['q_akb'],
                 'i_charge_max': status_values['i_charge_max'],
-                'u_load_abc': status_values['u_load_abc'],
+                'u_abc_max': status_values['u_abc_max'],
                 'time_zone': 3,
                 'iakb1': f'{status_values["iakb1"]:.2f}',
                 'uakb1': f'{status_values["uakb1"]:.1f}',

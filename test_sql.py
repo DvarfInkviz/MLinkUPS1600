@@ -5,8 +5,8 @@ import math
 
 def get_db_connection():
     basedir = os.path.abspath(os.path.dirname(__file__))
-    # connection = sqlite3.connect(os.path.join(basedir, "database.db"))
-    connection = sqlite3.connect("/var/www/web-ups1600/database.db")
+    # connection = sqlite3.connect(os.path.join(basedir, "database_1708.db"))
+    connection = sqlite3.connect("/var/www/web-ups1600/database_1708.db")
     connection.row_factory = sqlite3.Row
     return connection
 

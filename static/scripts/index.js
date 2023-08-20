@@ -135,25 +135,25 @@ function request_status() {
             .then(function(response) {
                 if (response.connection == 'on') {
                     switch (response.state) {
-                        case 0:
+                        case '0':
                             s_status = "Работа от АКБ";
                             break;
-                        case 1:
+                        case '1':
                             s_status = "Работа от сети без АКБ";
                             break;
-                        case 2:
+                        case '2':
                             switch (response.status) {
                                 case 194:
                                     s_status = "Буферный режим - заряд АКБ";
                                     break;
                                 case 196:
-                                    s_status = "Буферный режим - АКБ заряжено";
+                                    s_status = "Буферный режим - разряд АКБ";
                                     break;
                                 default:
                                     s_status = "Буферный режим - заряд АКБ";
                             }
                             break;
-                        case 3:
+                        case '3':
                             switch (response.err) {
                                 case 64:
                                     s_status = "Критическая ошибка - перегрузка по току!";
@@ -164,11 +164,17 @@ function request_status() {
                                 case 4:
                                     s_status = "Критическая ошибка - датчик тока вышел из строя!";
                                     break;
+                                case 8:
+                                    s_status = "Критическая ошибка - напряжение на фазах вне диапазона!";
+                                    break;
+                                case 16:
+                                    s_status = "Критическая ошибка - напряжение на АКБ вне диапазона!";
+                                    break;
                                 case 128:
                                     s_status = "Критическая ошибка - перегрев АКБ!";
                                     break;
                                 default:
-                                    s_status = "Критическая ошибка";
+                                    s_status = "Неизвестная критическая ошибка - Code#" + response.err;
                             }
                             break;
                     }
@@ -184,9 +190,16 @@ function request_status() {
                     document.getElementById('err_sts').textContent = s_status;
                     document.getElementById('iakb1').textContent = response.iakb1+' A';
                     document.getElementById('uakb1').textContent = response.uakb1+' B';
-                    document.getElementById('uakb2').textContent = response.uakb2+' B';
-                    document.getElementById('uakb3').textContent = response.uakb3+' B';
-                    document.getElementById('uakb4').textContent = response.uakb4+' B';
+                    if (response.uakb1 == 0) {
+                        document.getElementById('uakb2').textContent = '0.0 B';
+                        document.getElementById('uakb3').textContent = '0.0 B';
+                        document.getElementById('uakb4').textContent = '0.0 B';
+                    }
+                    else {
+                        document.getElementById('uakb2').textContent = response.uakb2+' B';
+                        document.getElementById('uakb3').textContent = response.uakb3+' B';
+                        document.getElementById('uakb4').textContent = response.uakb4+' B';
+                    }
                     document.getElementById('uload').textContent = response.uload+' B';
                     document.getElementById('iload').textContent = response.iload+' A';
                     document.getElementById('ua').textContent  = response.ua+' B';

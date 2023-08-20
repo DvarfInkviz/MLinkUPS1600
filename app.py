@@ -122,8 +122,8 @@ def adc_stm(values):
     _first = True
     while True:
         # TODO try-exept for read data
-        in_buf = list(s.read(size=60))
-        if len(in_buf) == 60:
+        in_buf = list(s.read(size=62))
+        if len(in_buf) == 62:
             to_status_log(str(in_buf))
             values['err'] = in_buf[1]
             values['status'] = in_buf[2]
@@ -158,7 +158,9 @@ def adc_stm(values):
             values['einv3'] = (in_buf[53] * 256 + in_buf[52]) / 10
             values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] + values['iakb1']
             values['state'] = in_buf[57]
-            values['i_max_stm'] = in_buf[58] * 256 + in_buf[59]
+            values['u_bv'] = (in_buf[58] * 256 + in_buf[59]) / 80
+            values['rele_in'] = f'{in_buf[60]:04b}'
+            values['rele_out'] = f'{in_buf[61]:04b}'
             if _first:
                 if _m < cnt_m - 1:
                     _m_list[0][_m] = values['iakb1']
@@ -235,7 +237,8 @@ def adc_stm(values):
                                   format(int(float(values['i_charge_max'])), '02x') +
                                   format(int(float(values['k_u_akb']) * 1000), '04x') +
                                   format(int(float(values['k_i_akb']) * 10), '04x') +
-                                  format(int(float(values['t_delay']) / 10), '02x'))
+                                  format(int(float(values['t_delay']) / 10), '02x') +
+                                  format(int(float(values['temp2'])), '02x'))
         to_status_log(str(list(s_out)))
         s.write(s_out)
     # s.close()
@@ -434,27 +437,27 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
                  'temp2': 0, 'temp2_id': '',  # air temp
                  # 'u_akb_min': ups_set[1], 'u_akb_max': ups_set[2], 'i_akb_min': ups_set[3], 'i_akb_max': ups_set[4],
                  'uabc_min': 180, 'uabc_max': 240, 'u_abc_alarm_min': 120, 'u_abc_alarm_max': 260,
-                 'u_akb_max': int(ups_set[9]), 'i_load_max': int(ups_set[10]),
-                 't_charge_max': ups_set[11], 'discharge_abc': ups_set[12], 'discharge_akb': int(ups_set[13]),
-                 't_delay': int(ups_set[14]), 'q_akb': ups_set[15], 'i_charge_max': int(ups_set[16]),
-                 'u_abc_max': int(ups_set[17]), 'state': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2,
+                 'u_akb_max': u_akb_dict[40][100], 'i_load_max': int(ups_set[2]),
+                 't_charge_max': ups_set[3], 'discharge_abc': ups_set[4], 'discharge_akb': int(ups_set[5]),
+                 't_delay': int(ups_set[6]), 'q_akb': ups_set[7], 'i_charge_max': int(ups_set[8]),
+                 'u_abc_max': int(ups_set[9]), 'state': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2,
                  'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 3,
-                 'sub_cnt5': 0, 'edit': False,
+                 'sub_cnt5': 0, 'edit': False, 'rele_in': '0000', 'rele_out': '0000',
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
                  'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0',
                  'menu_0_4': 'Settings; ', 'menu_0_5': 'Logs; ', 'menu_0_6': 'Operating up;time',
                  'menu_1_0': 'Ini error:;empty', 'menu_5_0': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty',
-                 'discharge_depth': int(ups_set[18])}
-# 9 u_load_max TEXT DEFAULT '4000',
-# 10 i_load_max TEXT DEFAULT '90'
-# 11 t_charge_max TEXT DEFAULT '20',
-# 12 discharge_abc TEXT DEFAULT '10',
-# 13 discharge_akb TEXT DEFAULT '70',
-# 14 t_delay TEXT DEFAULT '100',
-# 15 q_akb TEXT DEFAULT '200',
-# 16 i_charge_max TEXT DEFAULT '20',
-# 17 u_abc_max TEXT DEFAULT '48'
-# 18 discharge_depth TEXT DEFAULT '30'
+                 'discharge_depth': int(ups_set[10])}
+# 9 u_load_max TEXT DEFAULT '4000',     1
+# 10 i_load_max TEXT DEFAULT '90'       2
+# 11 t_charge_max TEXT DEFAULT '20',    3
+# 12 discharge_abc TEXT DEFAULT '48',   4
+# 13 discharge_akb TEXT DEFAULT '48',   5
+# 14 t_delay TEXT DEFAULT '100',        6
+# 15 q_akb TEXT DEFAULT '100',          7
+# 16 i_charge_max TEXT DEFAULT '10',    8
+# 17 u_abc_max TEXT DEFAULT '48'        9
+# 18 discharge_depth TEXT DEFAULT '30'  10
 status_values['menu_0_3'] = f'Battery - {status_values["bat"]}%;t charge - {status_values["t_bat"]}h'
 status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};I3={status_values["iinv3"]}'
 status_values['menu_2_1'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
@@ -500,6 +503,7 @@ E_DELAY = 0.0005
 bus = smbus.SMBus(0)
 
 to_log(f'!!!!!!!!App starts at {datetime.now()}')
+to_human_log(msg=f'Прибор включили, веб-сервис запущен в {datetime.now()}')
 lcd_init()
 lcd_string(status_values['menu_0_0'].split(sep=';')[0], LCD_LINE_1)
 lcd_string(status_values['menu_0_0'].split(sep=';')[1], LCD_LINE_2)
@@ -646,14 +650,14 @@ def index():
                 'bv1_status': get_bv_status(u_bv=status_values['ua'], values=status_values),
                 'bv2_status': get_bv_status(u_bv=status_values['ub'], values=status_values),
                 'bv3_status': get_bv_status(u_bv=status_values['uc'], values=status_values),
-                # 'u_akb_min': status_values['u_akb_min'],
-                # 'u_akb_max': status_values['u_akb_max'],
-                # 'i_akb_min': status_values['i_akb_min'],
-                # 'i_akb_max': status_values['i_akb_max'],
-                # 'u_min': status_values['u_min'],
-                # 'u_max': status_values['u_max'],
-                # 'u_abc_alarm_min': status_values['u_abc_alarm_min'],
-                # 'u_abc_alarm_max': status_values['u_abc_alarm_max'],
+                'dry1_in': int(status_values['rele_in'][0]),
+                'dry2_in': int(status_values['rele_in'][1]),
+                'dry3_in': int(status_values['rele_in'][2]),
+                'dry4_in': int(status_values['rele_in'][3]),
+                'dry1_out': int(status_values['rele_out'][0]),
+                'dry2_out': int(status_values['rele_out'][1]),
+                'dry3_out': int(status_values['rele_out'][2]),
+                'dry4_out': int(status_values['rele_out'][3]),
                 'u_load_max': status_values['u_load_max'],
                 'i_load_max': status_values['i_load_max'],
                 't_charge_max': status_values['t_charge_max'],
@@ -675,7 +679,7 @@ def index():
                 'ub': f'{status_values["ub"]}',
                 'uc': f'{status_values["uc"]}',
                 'state': f'{status_values["state"]}',
-                'i_max_stm': f'{status_values["i_max_stm"]}',
+                'u_bv': f'{status_values["u_bv"]:.1f}',
                 'tinv1': f'{status_values["tinv1"]}',
                 'tinv2': f'{status_values["tinv2"]}',
                 'tinv3': f'{status_values["tinv3"]}',
@@ -782,4 +786,5 @@ def system():
 
 # sudo /bin/sed -i 's/address.*/address 192.168.1.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.1.111/' /etc/network/interfaces
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.8.52/' /etc/apache2/sites-available/web-ups1600.conf
+# sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.1.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo service networking restart

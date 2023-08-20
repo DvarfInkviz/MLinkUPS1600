@@ -19,11 +19,11 @@ DROP TABLE IF EXISTS ups_settings;
 
 CREATE TABLE ups_settings (
     id INTEGER PRIMARY KEY,
-    u_load_max TEXT DEFAULT '4000',
+    u_load_max TEXT DEFAULT '55',
     i_load_max TEXT DEFAULT '80',
     t_charge_max TEXT DEFAULT '20',
-    discharge_abc TEXT DEFAULT '30',
-    discharge_akb TEXT DEFAULT '70',
+    discharge_abc TEXT DEFAULT '48',
+    discharge_akb TEXT DEFAULT '48',
     t_delay TEXT DEFAULT '100',
     q_akb TEXT DEFAULT '100',
     i_charge_max TEXT DEFAULT '10',

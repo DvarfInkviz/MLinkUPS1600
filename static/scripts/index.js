@@ -213,7 +213,14 @@ function request_status() {
                     document.getElementById('iinv3').textContent  = response.iinv3+' A';
                     document.getElementById('temp_akb').textContent = response.temp_akb+' \u00B0C';
                     document.getElementById('temp_air').textContent = response.temp_air+' \u00B0C';
-                    document.getElementById('led_status').textContent = response.state+' - '+response.i_max_stm;
+                    document.getElementById('dry1_in').classList.toggle('rele_in_up', response.dry1_in);
+                    document.getElementById('dry2_in').classList.toggle('rele_in_up', response.dry2_in);
+                    document.getElementById('dry3_in').classList.toggle('rele_in_up', response.dry3_in);
+                    document.getElementById('dry4_in').classList.toggle('rele_in_up', response.dry4_in);
+                    document.getElementById('dry1_out').classList.toggle('rele_out_up', response.dry1_out);
+                    document.getElementById('dry2_out').classList.toggle('rele_out_up', response.dry2_out);
+                    document.getElementById('dry3_out').classList.toggle('rele_out_up', response.dry3_out);
+                    document.getElementById('dry4_out').classList.toggle('rele_out_up', response.dry4_out);
                     if (response.bv1_status == 'ok') {
                         document.getElementById('bv1_status').classList.toggle('alerts-border', 0);
                         document.getElementById('bv1_status').style.background = '#3f3';

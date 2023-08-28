@@ -110,7 +110,19 @@ def update_temp(values):
     values['temp2'] = values['w1temp'][1].get_temperature()
 
 
-def adc_stm(values):
+def get_error_status(cur, old):
+    if cur > 0 and not cur == old:
+        to_human_log(msg=err_dict[cur])
+    return cur
+
+
+def get_state_status(old, cur, err):
+    if err == 0 and not cur == old:
+        to_human_log(msg=status_dict[cur])
+    return cur
+
+
+def get_stm_status(values):
     # TODO try-exept for open serial port
     s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
                       xonxoff=False, rtscts=False, dsrdtr=False)
@@ -125,8 +137,8 @@ def adc_stm(values):
         in_buf = list(s.read(size=62))
         if len(in_buf) == 62:
             to_status_log(str(in_buf))
-            values['err'] = in_buf[1]
-            values['status'] = in_buf[2]
+            values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
+            values['status'] = get_state_status(cur=in_buf[2], old=values['status'], err=values['err'])
             values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
             values['iakb1'] = (in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])) / values['k_i_akb']
             values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.278
@@ -140,7 +152,7 @@ def adc_stm(values):
                                   values['uakb3'] - values['uakb2'] - values['uakb1']
             if values['uakb4'] < 0:
                 values['uakb4'] = 0
-            values['uakb4_0'] = in_buf[22] * 256 + in_buf[23]
+            # values['uakb4_0'] = in_buf[22] * 256 + in_buf[23]
             # 24 - F1
             values['iinv1'] = (in_buf[26] * 256 + in_buf[25]) / 10
             values['ua'] = in_buf[28] * 256 + in_buf[27]
@@ -159,8 +171,8 @@ def adc_stm(values):
             values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] + values['iakb1']
             values['state'] = in_buf[57]
             values['u_bv'] = (in_buf[58] * 256 + in_buf[59]) / 80
-            values['rele_in'] = f'{in_buf[60]:04b}'
-            values['rele_out'] = f'{in_buf[61]:04b}'
+            values['rele_in'] = f'{in_buf[60]:04b}'[::-1]
+            values['rele_out'] = f'{in_buf[61]:04b}'[::-1]
             if _first:
                 if _m < cnt_m - 1:
                     _m_list[0][_m] = values['iakb1']
@@ -215,7 +227,7 @@ def adc_stm(values):
                       f"I1 = {values['iinv1']:.2f}, UC = {values['uc']}, " \
                       f"I2 = {values['iinv2']:.2f}, UB = {values['ub']}, " \
                       f"I3 = {values['iinv3']:.2f}, UA = {values['ua']}"
-            to_human_log(msg=f"STM => {stm_out}")
+            # to_human_log(msg=f"STM => {stm_out}")
             values['menu_2_0'] = f'I1={values["iinv1"]} I2={values["iinv2"]};I3={values["iinv3"]}'
             values['menu_2_1'] = f'UA={values["ua"]} UB={values["ub"]};UC={values["uc"]}'
             values['menu_3_0'] = f'U1={values["uakb1"]:.1f} U2={values["uakb2"]:.1f};U3={values["uakb3"]:.1f} ' \
@@ -242,23 +254,6 @@ def adc_stm(values):
         to_status_log(str(list(s_out)))
         s.write(s_out)
     # s.close()
-
-
-# def start_stm():
-#     s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
-#                       xonxoff=False, rtscts=False, dsrdtr=False)
-#     s.reset_input_buffer()  # flush input buffer
-#     s.reset_output_buffer()
-#     s.write(b'R')
-#     asw = s.readline()
-#     if asw == b"Status code 0x52 received!\n":
-#         scheduler.remove_job(job_id='start_stm')
-#         scheduler.add_job(func=adc_stm, args=['zero', status_values], trigger='interval',
-#                           seconds=1, id='adc_stm', replace_existing=True)
-#
-#     else:
-#         to_status_log(msg=f"STM => {asw}")
-#     s.close()
 
 
 def menu(values):
@@ -428,8 +423,20 @@ scheduler.start()
 temp_time = 1
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
+# u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
+#               40: {30: 13.2, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
 u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
-              40: {30: 13.2, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
+              40: {30: 12, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
+err_dict = {4: 'Критическая ошибка - датчик тока вышел из строя!',
+            8: 'Критическая ошибка - напряжение на фазах вне диапазона!',
+            16: 'Критическая ошибка - напряжение на АКБ вне диапазона!',
+            32: 'Критическая ошибка - перегрузка по напряжению!',
+            64: 'Критическая ошибка - перегрузка по току!',
+            128: 'Критическая ошибка - перегрев АКБ!'}
+status_dict = {192: 'Работа от АКБ',
+               193: 'Работа от сети без АКБ',
+               194: 'Буферный режим - заряд АКБ',
+               196: 'Буферный режим - разряд АКБ'}
 status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0, 'uload': 0,
                  'bat': 100, 't_bat': 2, 'iload': 0, 'tinv1': 0, 'tinv2': 0, 'tinv3': 0, 'einv1': 0, 'einv2': 0,
                  'einv3': 0, 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
@@ -440,7 +447,8 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
                  'u_akb_max': u_akb_dict[40][100], 'i_load_max': int(ups_set[2]),
                  't_charge_max': ups_set[3], 'discharge_abc': ups_set[4], 'discharge_akb': int(ups_set[5]),
                  't_delay': int(ups_set[6]), 'q_akb': ups_set[7], 'i_charge_max': int(ups_set[8]),
-                 'u_abc_max': int(ups_set[9]), 'state': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2,
+                 'u_abc_max': int(ups_set[9]), 'state': -1, 'err': 0, 'status': 0, 'u_load_max': 0, 'u_bv': 0,
+                 'i_max_stm': 0, 'k_u_akb': 1.340, 'k_i_akb': 13.2,
                  'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 3,
                  'sub_cnt5': 0, 'edit': False, 'rele_in': '0000', 'rele_out': '0000',
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
@@ -513,9 +521,9 @@ if len(status_values['w1temp']) == 2:
     status_values['temp2_id'] = status_values['w1temp'][1].id
     status_values['temp1'] = status_values['w1temp'][0].get_temperature()
     status_values['temp2'] = status_values['w1temp'][1].get_temperature()
-if scheduler.get_job(job_id='adc_stm') is None:
-    scheduler.add_job(func=adc_stm, args=[status_values], trigger='interval',
-                      seconds=1, id='adc_stm', replace_existing=True)
+if scheduler.get_job(job_id='get_stm_status') is None:
+    scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
+                      seconds=1, id='get_stm_status', replace_existing=True)
 time.sleep(1)
 if scheduler.get_job(job_id='menu') is None:
     scheduler.add_job(func=menu, args=[status_values], id='menu', trigger='interval', seconds=1, coalesce=True,
@@ -640,7 +648,6 @@ def index():
                 'connection': 'on',
                 'version': 'arm.0.3, mcu.0.3',
                 'iakb1_0': f'{status_values["iakb1_0"]}',
-                'uakb4_0': f'{status_values["uakb4_0"]}',
             }
         if json_data['action'] == 'status':
             return {
@@ -784,7 +791,9 @@ def system():
     else:
         return redirect(url_for('login'))
 
+
 # sudo /bin/sed -i 's/address.*/address 192.168.1.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.1.111/' /etc/network/interfaces
+# sudo /bin/sed -i 's/address.*/address 192.168.8.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.8.1/' /etc/network/interfaces
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.8.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.1.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo service networking restart

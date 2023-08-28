@@ -136,7 +136,16 @@ function request_status() {
                 if (response.connection == 'on') {
                     switch (response.state) {
                         case '0':
-                            s_status = "Работа от АКБ";
+                            switch (response.status) {
+                                case 194:
+                                    s_status = "Работа от АКБ - заряд АКБ";
+                                    break;
+                                case 196:
+                                    s_status = "Работа от АКБ - разряд АКБ";
+                                    break;
+                                default:
+                                    s_status = "Работа от АКБ - разряд АКБ";
+                            }
                             break;
                         case '1':
                             s_status = "Работа от сети без АКБ";
@@ -202,6 +211,7 @@ function request_status() {
                     }
                     document.getElementById('uload').textContent = response.uload+' B';
                     document.getElementById('iload').textContent = response.iload+' A';
+                    document.getElementById('u_bv').textContent = response.u_bv+' B';
                     document.getElementById('ua').textContent  = response.ua+' B';
                     document.getElementById('ub').textContent  = response.ub+' B';
                     document.getElementById('uc').textContent  = response.uc+' B';

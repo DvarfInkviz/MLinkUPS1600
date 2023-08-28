@@ -61,53 +61,69 @@ def lcd_string(message, line):
 def to_human_log(session_val=None, msg=''):
     if session_val is None:
         session_val = {'ip_address': 'localhost', 'login': 'server-kan-b-brf'}
-    if not os.path.isfile(f"/var/www/web-ups1600/logs/human_{datetime.now().strftime('%d%m%Y')}.log"):
-        with open(f"/var/www/web-ups1600/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'w', encoding='utf-8') \
-                as _file:
+    if not os.path.isfile(f"/var/www/{PROJECT_NAME}/logs/human_{datetime.now().strftime('%d%m%Y')}.log"):
+        with open(f"/var/www/{PROJECT_NAME}/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'w',
+                  encoding='utf-8') as _file:
             _file.write(f"human log starts {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}\n-=-=-=-=-=-=-\n")
             _file.write(datetime.now().strftime("%d%m%Y %H:%M:%S.%s# ") + session_val['ip_address'] + ' # ' +
-                        session_val['login'] + ' # ' + msg + '\n')
+                        msg + '\n')
     else:
-        with open(f"/var/www/web-ups1600/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'a', encoding='utf-8') \
-                as _f:
+        with open(f"/var/www/{PROJECT_NAME}/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'a',
+                  encoding='utf-8') as _f:
             _f.write(datetime.now().strftime("%d%m%Y %H:%M:%S.%s# ") + session_val['ip_address'] + ' # ' +
-                     session_val['login'] + ' # ' + msg + '\n')
+                     msg + '\n')
 
 
 def to_log(msg):
-    if not os.path.isfile(f"/var/www/web-ups1600/logs/web_{datetime.now().strftime('%d%m%Y')}.log"):
-        with open(f"/var/www/web-ups1600/logs/web_{datetime.now().strftime('%d%m%Y')}.log", 'w', encoding='utf-8') \
+    if not os.path.isfile(f"/var/www/{PROJECT_NAME}/logs/web_{datetime.now().strftime('%d%m%Y')}.log"):
+        with open(f"/var/www/{PROJECT_NAME}/logs/web_{datetime.now().strftime('%d%m%Y')}.log", 'w', encoding='utf-8') \
                 as _file:
             _file.write(f"web log starts {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}\n-=-=-=-=-=-=-\n")
             _file.write(datetime.now().strftime("%d-%m-%Y %H:%M:%S.%s ### ") + msg + '\n')
     else:
-        with open(f"/var/www/web-ups1600/logs/web_{datetime.now().strftime('%d%m%Y')}.log", 'a', encoding='utf-8') \
+        with open(f"/var/www/{PROJECT_NAME}/logs/web_{datetime.now().strftime('%d%m%Y')}.log", 'a', encoding='utf-8') \
                 as _f:
             _f.write(datetime.now().strftime("%d-%m-%Y %H:%M:%S.%s ### ") + msg + '\n')
 
 
 def to_status_log(msg):
-    if not os.path.isfile(f"/var/www/web-ups1600/logs/status_{datetime.now().strftime('%d%m%Y')}.log"):
-        with open(f"/var/www/web-ups1600/logs/status_{datetime.now().strftime('%d%m%Y')}.log", 'w',
+    if not os.path.isfile(f"/var/www/{PROJECT_NAME}/logs/status_{datetime.now().strftime('%d%m%Y')}.log"):
+        with open(f"/var/www/{PROJECT_NAME}/logs/status_{datetime.now().strftime('%d%m%Y')}.log", 'w',
                   encoding='utf-8') as _file:
             _file.write(f"status log starts {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}\n-=-=-=-=-=-=-\n")
             _file.write(datetime.now().strftime("%d-%m-%Y %H:%M:%S.%s ### ") + msg + '\n')
     else:
-        with open(f"/var/www/web-ups1600/logs/status_{datetime.now().strftime('%d%m%Y')}.log", 'a',
+        with open(f"/var/www/{PROJECT_NAME}/logs/status_{datetime.now().strftime('%d%m%Y')}.log", 'a',
                   encoding='utf-8') as _f:
             _f.write(datetime.now().strftime("%d-%m-%Y %H:%M:%S.%s ### ") + msg + '\n')
 
 
 def get_db_connection():
     # basedir = os.path.abspath(os.path.dirname(__file__))
-    connection = sqlite3.connect("/var/www/web-ups1600/database.db")
+    connection = sqlite3.connect(f"/var/www/{PROJECT_NAME}/database.db")
     connection.row_factory = sqlite3.Row
     return connection
 
 
 def update_temp(values):
-    values['temp1'] = values['w1temp'][0].get_temperature()
-    values['temp2'] = values['w1temp'][1].get_temperature()
+    global cnt1_error
+    global cnt2_error
+    try:
+        values['temp1'] = values['w1temp'][0].get_temperature()
+        cnt1_error = 0
+    except IndexError:
+        values['temp1'] = 0
+        if cnt1_error < 3:
+            to_human_log(msg='Датчик температуры на АКБ не подключен или вышел из строя!')
+            cnt1_error += 1
+    try:
+        values['temp2'] = values['w1temp'][1].get_temperature()
+        cnt2_error = 0
+    except IndexError:
+        values['temp2'] = 0
+        if cnt2_error < 3:
+            to_human_log(msg='Датчик температуры в шкафу не подключен или вышел из строя!')
+            cnt2_error += 1
 
 
 def get_error_status(cur, old):
@@ -293,29 +309,29 @@ def menu(values):
         if counter - counter0 > 2:
             to_status_log(msg=f'RightRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
-                _conn = get_db_connection()
                 if values["submenu"] == 0 and values["i_load_max"] < 80:
                     values["i_load_max"] += 1
-                    _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
-                    values['menu_4_0'] = f'I load max:;{values["i_load_max"]}A'
+                    values['menu_4_0'] = f'I load max:;{values["i_load_max"]:15}A'
                 if values["submenu"] == 1 and values["i_charge_max"] < 20:
                     values["i_charge_max"] += 1
-                    _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
-                                  (str(values["i_charge_max"]),))
-                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10}Ah'
+                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10:14}Ah'
                 if values["submenu"] == 2 and values["discharge_depth"] < 90:
                     values["discharge_depth"] += 10
-                    _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
-                                  (str(values["discharge_depth"]),))
-                    values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]}%'
+                    values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]:15}%'
                 if values["submenu"] == 3 and values["u_abc_max"] < 55:
                     values["u_abc_max"] += 1
-                    _conn.execute('UPDATE ups_settings SET u_abc_max = ? WHERE id =1', (str(values["u_abc_max"]),))
-                    values['menu_4_3'] = f'U load w/o AKB:;{values["u_abc_max"]}V'
-                _conn.commit()
-                _conn.close()
+                    values['menu_4_3'] = f'U load w/o AKB:;{values["u_abc_max"]:15}V'
+                if values["submenu"] == 4 and values["max_temp_air"] < 60:
+                    values["max_temp_air"] += 1
+                    values['menu_4_4'] = f'Max temperature:;{values["max_temp_air"]:15}C'
             elif values["submenu"] < values[f"sub_cnt{values['menu']}"]:
                 values["submenu"] = values["submenu"] + 1
+            if values["menu"] == 0 and values["submenu"] == 6:
+                with open(f"/home/microlink/uptime", 'r', encoding='utf-8') as _f:
+                    up_time = int(_f.readline()) / 3600
+                with open(f"/home/microlink/up_cur", 'r') as _file:
+                    up_time += int(_file.readline().split(sep='.')[0]) / 3600
+                    values['menu_0_6'] = f'Operating up;time {up_time:10.1f}h'
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
             if values['edit']:
@@ -326,31 +342,31 @@ def menu(values):
         elif counter - counter0 < -2:
             to_status_log(msg=f'LeftRotate: {counter0 - counter}')
             if values["menu"] == 4 and values['edit']:
-                _conn = get_db_connection()
                 if values["submenu"] == 0 and values["i_load_max"] > 20:
                     values["i_load_max"] -= 1
-                    _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1', (str(values["i_load_max"]),))
-                    values['menu_4_0'] = f'I load max:;{values["i_load_max"]}A'
+                    values['menu_4_0'] = f'I load max:;{values["i_load_max"]:15}A'
                 if values["submenu"] == 1 and values["i_charge_max"] > 4:
                     values["i_charge_max"] -= 1
-                    _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
-                                  (str(values["i_charge_max"]),))
-                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10}Ah'
+                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10:14}Ah'
                 if values["submenu"] == 2 and values["discharge_depth"] > 30:
                     values["discharge_depth"] -= 10
-                    _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
-                                  (str(values["discharge_depth"]),))
-                    values['menu_4_2'] = f'Discharge depth:;{values["discharge_akb"]}%'
+                    values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]:15}%'
                 if values["submenu"] == 3 and values["u_abc_max"] > 44:
                     values["u_abc_max"] -= 1
-                    _conn.execute('UPDATE ups_settings SET u_abc_max = ? WHERE id =1', (str(values["u_abc_max"]),))
-                    values['menu_4_3'] = f'U load w/o AKB:;{values["u_abc_max"]}V'
-                _conn.commit()
-                _conn.close()
+                    values['menu_4_3'] = f'U load w/o AKB:;{values["u_abc_max"]:15}V'
+                if values["submenu"] == 4 and values["max_temp_air"] > 30:
+                    values["max_temp_air"] -= 1
+                    values['menu_4_4'] = f'Max temperature:;{values["max_temp_air"]:15}C'
             elif values["submenu"] > 0:
                 values["submenu"] = values["submenu"] - 1
             if values["menu"] == values["submenu"] == 0:
                 values['menu_0_0'] = f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}'
+            if values["menu"] == 0 and values["submenu"] == 6:
+                with open(f"/home/microlink/uptime", 'r', encoding='utf-8') as _f:
+                    up_time = int(_f.readline()) / 3600
+                with open(f"/home/microlink/up_cur", 'r') as _file:
+                    up_time += int(_file.readline().split(sep='.')[0]) / 3600
+                    values['menu_0_6'] = f'Operating up;time {up_time:10.1f}h'
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
             if values['edit']:
@@ -376,6 +392,23 @@ def press(values):
             if push > 60:
                 if values['edit'] and values['menu'] == 4:
                     values['edit'] = False
+                    _conn = get_db_connection()
+                    if values['submenu'] == 0:
+                        _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1',
+                                      (str(values["i_load_max"]),))
+                    if values['submenu'] == 1:
+                        _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
+                                      (str(values["i_charge_max"]),))
+                    if values['submenu'] == 2:
+                        _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
+                                      (str(values["discharge_depth"]),))
+                    if values['submenu'] == 3:
+                        _conn.execute('UPDATE ups_settings SET u_abc_max = ? WHERE id =1', (str(values["u_abc_max"]),))
+                    if values['submenu'] == 4:
+                        _conn.execute('UPDATE ups_settings SET max_temp_air = ? WHERE id =1',
+                                      (str(values["max_temp_air"]),))
+                    _conn.commit()
+                    _conn.close()
                     lcd_byte(LCD_LINE_1, LCD_CMD)  # переход на 1 строку
                     lcd_byte(0x0C, LCD_CMD)  # 001100 нормальный режим работы
                 if not values['edit'] and 0 < values['menu']:
@@ -418,9 +451,25 @@ def get_bv_status(u_bv, values):
         return 'alarm'
 
 
+PROJECT_NAME = 'web-ups1600'
 scheduler = BackgroundScheduler()
 scheduler.start()
 temp_time = 1
+cnt1_error = 0
+cnt2_error = 0
+if not os.path.isfile(f"/home/microlink/uptime"):
+    with open(f"/home/microlink/uptime", 'w', encoding='utf-8') as _file:
+        _file.write('0')
+    up_time = 0
+else:
+    with open(f"/home/microlink/uptime", 'r', encoding='utf-8') as _f:
+        all_time = int(_f.readline())
+    if os.path.isfile(f"/home/microlink/up_cur"):
+        with open(f"/home/microlink/up_cur", 'r') as _file:
+            all_time += int(_file.readline().split(sep='.')[0])
+    with open(f"/home/microlink/uptime", 'w', encoding='utf-8') as _f:
+        _f.write(str(all_time))
+    up_time = all_time / 3600
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
 # u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
@@ -448,34 +497,36 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
                  't_charge_max': ups_set[3], 'discharge_abc': ups_set[4], 'discharge_akb': int(ups_set[5]),
                  't_delay': int(ups_set[6]), 'q_akb': ups_set[7], 'i_charge_max': int(ups_set[8]),
                  'u_abc_max': int(ups_set[9]), 'state': -1, 'err': 0, 'status': 0, 'u_load_max': 0, 'u_bv': 0,
-                 'i_max_stm': 0, 'k_u_akb': 1.340, 'k_i_akb': 13.2,
-                 'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 3,
+                 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2,
+                 'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 4,
                  'sub_cnt5': 0, 'edit': False, 'rele_in': '0000', 'rele_out': '0000',
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
                  'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0',
-                 'menu_0_4': 'Settings; ', 'menu_0_5': 'Logs; ', 'menu_0_6': 'Operating up;time',
+                 'menu_0_4': 'Settings; ', 'menu_0_5': 'Logs; ', 'menu_0_6': f'Operating up;time {up_time:10.1f}h',
                  'menu_1_0': 'Ini error:;empty', 'menu_5_0': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty',
-                 'discharge_depth': int(ups_set[10])}
-# 9 u_load_max TEXT DEFAULT '4000',     1
-# 10 i_load_max TEXT DEFAULT '90'       2
-# 11 t_charge_max TEXT DEFAULT '20',    3
-# 12 discharge_abc TEXT DEFAULT '48',   4
-# 13 discharge_akb TEXT DEFAULT '48',   5
-# 14 t_delay TEXT DEFAULT '100',        6
-# 15 q_akb TEXT DEFAULT '100',          7
-# 16 i_charge_max TEXT DEFAULT '10',    8
-# 17 u_abc_max TEXT DEFAULT '48'        9
-# 18 discharge_depth TEXT DEFAULT '30'  10
+                 'discharge_depth': int(ups_set[10]), 'max_temp_air': int(ups_set[11])}
+# u_load_max TEXT DEFAULT '4000',    1
+# i_load_max TEXT DEFAULT '90'       2
+# t_charge_max TEXT DEFAULT '20',    3
+# discharge_abc TEXT DEFAULT '48',   4
+# discharge_akb TEXT DEFAULT '48',   5
+# t_delay TEXT DEFAULT '100',        6
+# q_akb TEXT DEFAULT '100',          7
+# i_charge_max TEXT DEFAULT '10',    8
+# u_abc_max TEXT DEFAULT '48'        9
+# discharge_depth TEXT DEFAULT '30'  10
+# max_temp_air TEXT DEFAULT '60'     11
 status_values['menu_0_3'] = f'Battery - {status_values["bat"]}%;t charge - {status_values["t_bat"]}h'
 status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};I3={status_values["iinv3"]}'
 status_values['menu_2_1'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
 status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uakb2"]};U3={status_values["uakb3"]} ' \
                             f'U4={status_values["uakb4"]}'
 status_values['menu_3_1'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
-status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]}A'
-status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"]*10}Ah'
-status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]}%'
-status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]}V'
+status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]:15}A'
+status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"]*10:14}Ah'
+status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]:15}%'
+status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]:15}V'
+status_values['menu_4_4'] = f'Max temperature:;{status_values["max_temp_air"]:15}C'
 # status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
 
 app = Flask(__name__)
@@ -628,6 +679,7 @@ def index():
     if request.method == "POST":
         json_data = request.get_json()
         to_log(f'=> {json_data}')
+        session['ip_address'] = request.remote_addr
         # if json_data['action'] == 'validate':
         #     conn = get_db_connection()
         #     ip_client = conn.execute('SELECT ip FROM users WHERE login =?', (session['login'],)).fetchone()
@@ -646,10 +698,15 @@ def index():
         if json_data['action'] == 'start':
             return {
                 'connection': 'on',
-                'version': 'arm.0.3, mcu.0.3',
+                'version': 'arm.0.5, mcu.1.3',
                 'iakb1_0': f'{status_values["iakb1_0"]}',
             }
         if json_data['action'] == 'status':
+            with open(f"/etc/armbianmonitor/datasources/soctemp", 'r') as _file:
+                soc_t = int(_file.readline()) / 1000
+            with open(f"/proc/uptime", 'r') as up_f:
+                with open(f"/home/microlink/up_cur", 'w') as cur_f:
+                    cur_f.write(up_f.readline().split(sep=' ')[0])
             return {
                 'connection': 'on',
                 'err': status_values['err'],
@@ -666,14 +723,14 @@ def index():
                 'dry3_out': int(status_values['rele_out'][2]),
                 'dry4_out': int(status_values['rele_out'][3]),
                 'u_load_max': status_values['u_load_max'],
-                'i_load_max': status_values['i_load_max'],
-                't_charge_max': status_values['t_charge_max'],
-                'discharge_abc': status_values['discharge_abc'],
-                'discharge_akb': status_values['discharge_akb'],
-                't_delay': status_values['t_delay'],
-                'q_akb': status_values['q_akb'],
-                'i_charge_max': status_values['i_charge_max'],
-                'u_abc_max': status_values['u_abc_max'],
+                # 'i_load_max': status_values['i_load_max'],
+                # 't_charge_max': status_values['t_charge_max'],
+                # 'discharge_abc': status_values['discharge_abc'],
+                # 'discharge_akb': status_values['discharge_akb'],
+                # 't_delay': status_values['t_delay'],
+                # 'q_akb': status_values['q_akb'],
+                # 'i_charge_max': status_values['i_charge_max'],
+                # 'u_abc_max': status_values['u_abc_max'],
                 'time_zone': 3,
                 'iakb1': f'{status_values["iakb1"]:.2f}',
                 'uakb1': f'{status_values["uakb1"]:.1f}',
@@ -694,8 +751,38 @@ def index():
                 'iinv2': f'{status_values["iinv2"]:.1f}',
                 'iinv3': f'{status_values["iinv3"]:.1f}',
                 'temp_akb': f'{status_values["temp1"]:.1f}',
-                'temp_air': f'{status_values["temp2"]:.1f}'
+                'temp_air': f'{status_values["temp2"]:.1f}',
+                'temp_cpu': f'{soc_t:.1f}'
             }
+        if json_data['action'] == 'get_journal':
+            with open(f"/var/www/{PROJECT_NAME}/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'r',
+                      encoding='utf-8') as _file:
+                _data = _file.readlines()
+            return {
+                'status': 'ok',
+                'journal': _data[::-1],
+            }
+        if json_data['action'] == 'get_settings':
+            return {
+                'status': 'ok',
+                'discharge_depth': status_values['discharge_depth'],
+                'q_akb': status_values['q_akb'],
+                'u_abc_max': status_values['u_abc_max'],
+                'i_load_max': status_values['i_load_max'],
+                'time_zone': 3,
+            }
+        if json_data['action'] == 'update':
+            status_values[json_data['status_values']] = int(''.join(filter(str.isdigit, json_data['value'])))
+            _conn = get_db_connection()
+            _conn.execute(f"UPDATE ups_settings SET {json_data['status_values']} = ? WHERE id =1",
+                          (str(status_values[json_data['status_values']]),))
+            _conn.commit()
+            _conn.close()
+            status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]:15}A'
+            status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"] * 10:14}Ah'
+            status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]:15}%'
+            status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]:15}V'
+            status_values['menu_4_4'] = f'Max temperature:;{status_values["max_temp_air"]:15}C'
 
     return render_template("index.html")
     # if 'login' in session:
@@ -797,3 +884,4 @@ def system():
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.8.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.1.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo service networking restart
+# cat /etc/armbianmonitor/datasources/soctemp

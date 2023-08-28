@@ -1,27 +1,9 @@
 // INPUTMASK //
 document.addEventListener('DOMContentLoaded', function () {
-    $("#u_akb_min").inputmask({mask: "9{1,2}В", placeholder: '0'});
-    $("#u_akb_max").inputmask({mask: "9{1,2}B", placeholder: '0'});
-    $("#i_akb_min").inputmask({mask: "9{1,2}.9{1,2}A", placeholder: '0'});
-    $("#i_akb_max").inputmask({mask: "9{1,2}.9{1,2}A", placeholder: '0'});
-    $("#u_abc_min").inputmask({mask: "9{1,3}B", placeholder: '0'});
-    $("#u_abc_max").inputmask({mask: "9{1,3}B", placeholder: '0'});
-    $("#u_abc_alarm_min").inputmask({mask: "9{1,3}B", placeholder: '0'});
-    $("#u_abc_alarm_max").inputmask({mask: "9{1,3}B", placeholder: '0'});
-    $("#u_load_max").inputmask({mask: "9{1,2}.9{1}B", placeholder: '0'});
     $("#i_load_max").inputmask({mask: "9{1,2}A", placeholder: '0'});
-    $("#t_charge_max").inputmask({mask: "9{1,2}ч", placeholder: '0'});
-    $("#discharge_abc").inputmask({mask: "9{1,2}%", placeholder: '0'});
-    $("#discharge_akb").inputmask({mask: "9{1,2}%", placeholder: '0'});
-//    $("#t_delay").inputmask({mask: "9{1,3}мс", placeholder: '0'});
+    $("#discharge_depth").inputmask({mask: "9{1,2}%", placeholder: '0'});
     $("#q_akb").inputmask({mask: "9{1,3}А\u00B7ч", placeholder: '0'});
-    $("#i_charge_max").inputmask({mask: "9{1,2}A", placeholder: '0'});
-    $("#u_load_abc").inputmask({mask: "9{1,2}B", placeholder: '0'});
-
-//    $("#az_err").inputmask({mask: "9{1,3}.9{1,3}\u00B0", placeholder: '_'});
-//    $("#el_err").inputmask({mask: "9{1,3}.9{1,3}\u00B0", placeholder: '_'});
-//    $("#pl_err").inputmask({mask: "9{1,3}.9{1,3}\u00B0", placeholder: '_'});
-//    $("#mlevel_track").inputmask({mask: "[~]9{1,2}.9{1}", definitions: {'~': { validator: "[+-]",}}, placeholder: '_'});
+    $("#u_abc_max").inputmask({mask: "9{1,2}B", placeholder: '0'});
 });
 // ----- //
 // START //
@@ -39,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if(response.ok) {
             response.json()
             .then(function(response) {
-                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version + '.'+response.iakb1_0+'.'+response.uakb4_0;
+                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version + '.'+response.iakb1_0;
 //                show_fieldset(0);
 //                show_fieldset(1);
 //                if (response.priority == 1) {
@@ -188,14 +170,6 @@ function request_status() {
                             break;
                     }
                     document.getElementById('led_status').style.background = '#3f3';
-                    document.getElementById('discharge_abc').value = response.discharge_abc+'%';
-                    document.getElementById('discharge_akb').value = response.discharge_akb+'%';
-                    document.getElementById('i_load_max').value = response.i_load_max+'A';
-                    document.getElementById('q_akb').value = response.q_akb+'A\u00B7ч';
-                    document.getElementById('i_charge_max').value = response.i_charge_max+'A';
-                    document.getElementById('u_load_abc').value = response.u_load_abc+'B';
-                    document.getElementById('time_zone').value = response.time_zone;
-                    document.getElementById('t_delay').value = response.t_delay;
                     document.getElementById('err_sts').textContent = s_status;
                     document.getElementById('iakb1').textContent = response.iakb1+' A';
                     document.getElementById('uakb1').textContent = response.uakb1+' B';
@@ -223,6 +197,7 @@ function request_status() {
                     document.getElementById('iinv3').textContent  = response.iinv3+' A';
                     document.getElementById('temp_akb').textContent = response.temp_akb+' \u00B0C';
                     document.getElementById('temp_air').textContent = response.temp_air+' \u00B0C';
+                    document.getElementById('temp_cpu').textContent = response.temp_cpu+' \u00B0C';
                     document.getElementById('dry1_in').classList.toggle('rele_in_up', response.dry1_in);
                     document.getElementById('dry2_in').classList.toggle('rele_in_up', response.dry2_in);
                     document.getElementById('dry3_in').classList.toggle('rele_in_up', response.dry3_in);
@@ -284,6 +259,8 @@ function request_status() {
 // ----- //
 // BUTTONS //
 function show_fieldset(number) {
+    const $journal_list = document.querySelector('#table_journal');
+    if ($journal_list) {$journal_list.parentElement.removeChild($journal_list);}
     var nodes = document.getElementById("fs_1").getElementsByTagName('*');
     for(var y = 0; y < nodes.length; y++){
          nodes[y].disabled = false;
@@ -296,6 +273,93 @@ function show_fieldset(number) {
         else {
             document.getElementById('fs_'+i).style.visibility = 'visible';
             document.getElementById('fs_'+i).style.zIndex = '100';
+            if (i == 1) {
+                fetch('/index', {
+                    headers : {
+                        'Content-Type' : 'application/json'
+                    },
+                    method : 'POST',
+                    body : JSON.stringify( {
+                        'action' : 'get_journal',
+                    })
+                })
+                .then(function (response){
+                    if(response.ok) {
+                        response.json()
+                        .then(function(response) {
+                            if (response.status == 'ok') {
+                                journal.init(response.journal);
+                            }
+                        })
+                    }
+                })
+            }
+            if (i == 2) {
+                fetch('/index', {
+                    headers : {
+                        'Content-Type' : 'application/json'
+                    },
+                    method : 'POST',
+                    body : JSON.stringify( {
+                        'action' : 'get_settings',
+                    })
+                })
+                .then(function (response){
+                    if(response.ok) {
+                        response.json()
+                        .then(function(response) {
+                            if (response.status == 'ok') {
+                                document.getElementById('discharge_depth').value = response.discharge_depth+'%';
+                                document.getElementById('i_load_max').value = response.i_load_max+'A';
+                                document.getElementById('q_akb').value = response.q_akb+'A\u00B7ч';
+                                document.getElementById('u_abc_max').value = response.u_abc_max+'B';
+                                document.getElementById('time_zone').value = response.time_zone;
+                            }
+                        })
+                    }
+                })
+            }
         }
     }
 }
+function check_input(el) {
+    let text = el.value;
+    while (text.indexOf('_') >= 0) {text = text.replace('_', '0');}
+    el.value = text;
+    fetch('/index', {
+        headers : {
+            'Content-Type' : 'application/json'
+        },
+        method : 'POST',
+        body : JSON.stringify( {
+            'action' : 'update',
+            'status_values': el.id,
+            'value' : text,
+        })
+    })
+}
+// JOURNAL //
+const journal = {
+    elements: {
+        table: null,
+        tr: null
+    },
+    init(db_journal) {
+        this.elements.table = document.createElement("table");
+        this.elements.table.id = "table_journal";
+        let _td;
+        let keyElement;
+        for (let i = 0; i < db_journal.length; i++) {
+            this.elements.tr = document.createElement("tr");
+            _td = db_journal[i].split("#");
+            for (let j = 0; j < _td.length; j++) {
+                keyElement = document.createElement("td");
+                keyElement.textContent = _td[j];
+                this.elements.tr.appendChild(keyElement);
+            }
+            this.elements.table.appendChild(this.elements.tr)
+        }
+        document.getElementById('journal').appendChild(this.elements.table);
+    }
+};
+// ----- //

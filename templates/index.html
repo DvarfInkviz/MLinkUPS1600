@@ -65,9 +65,9 @@
                                 <legend style="text-align: left; font-size: 2vh;">Температура в шкафу</legend>
                                 <div class="current" id="temp_air" style="padding: 2vh;">0 &deg;С</div>
                             </fieldset>
-                            <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="u_load">
-                                <legend style="text-align: left; font-size: 2vh;">Напряжение нагрузки</legend>
-                                <div class="current" id="uload" style="padding: 2vh;">0 B</div>
+                            <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="t_3">
+                                <legend style="text-align: left; font-size: 2vh;">Температура CPU</legend>
+                                <div class="current" id="temp_cpu" style="padding: 2vh;">0 &deg;С</div>
                             </fieldset>
                         </div>
                         <div class="akb">
@@ -102,10 +102,16 @@
                         </div>
                     </div>
                     <div class="right">
-                        <fieldset class="status" style="flex-direction: row; flex-wrap: wrap; justify-content: flex-start;">
-                            <legend style="text-align: left; font-size: 2vh;">Управляющее напряжение</legend>
-                            <div id="u_bv" style="font-size: 3vh;">0 В</div>
-                        </fieldset>
+                        <div class="u_load">
+                            <fieldset class="u_load_f">
+                                <legend style="text-align: left; font-size: 1.8vh;">Управляющее напряжение</legend>
+                                <div id="u_bv" style="font-size: 3vh;">0 В</div>
+                            </fieldset>
+                            <fieldset class="u_load_f">
+                                <legend style="text-align: left; font-size: 1.8vh;">Напряжение нагрузки</legend>
+                                <div id="uload" style="font-size: 3vh;">0 B</div>
+                            </fieldset>
+                        </div>
                         <fieldset class="dry_in-fieldset">
                             <legend style="text-align: left; font-size: 2vh;">Входные сухие контакты</legend>
                             <fieldset class="led_status" id="dry1_in"></fieldset>
@@ -124,6 +130,7 @@
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden;" id="fs_1">
                     <legend style="text-align: left;">Журнал</legend>
+                    <div style="overflow: auto; height: 74vh; width: 100%;" id="journal"></div>
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_2">
                     <legend style="text-align: left;">Установки</legend>
@@ -140,22 +147,10 @@
                     <fieldset style="width: 80vh;">
                         <legend style="text-align: left; font-size: 2.5vh;">АКБ</legend>
 <!--                        onfocusout="check_input(this)"-->
-                        <div class="new_sub">Глубина разряда АКБ при наличии входного напряжения<input id="discharge_abc" type="text" placeholder="xx%"></div>
-                        <div class="new_sub">Глубина разряда АКБ при отсутствии входного напряжения<input id="discharge_akb" type="text" placeholder="xx%"></div>
-                        <div class="new_sub">Максимальный ток нагрузки – ток отсечки<input id="i_load_max" type="text" placeholder="xxA"></div>
-                        <div class="new_sub">Время задержки срабатывания защиты при превышении тока нагрузки
-                            <select name="t_delay" id="t_delay" onchange="">
-                                  <option value='0'>1 мс</option>
-                                  <option value='10'>10 мс</option>
-                                  <option value='50'>50 мс</option>
-                                  <option selected value='100'>100 мс</option>
-                                  <option value='200'>200 мс</option>
-                                  <option value='500'>500 мс</option>
-                            </select>
-                        </div>
-                        <div class="new_sub">Емкость АКБ<input id="q_akb" type="text" placeholder="xxxA&#183;ч" onfocusout=""></div>
-                        <div class="new_sub">Значение максимального тока заряда АКБ<input id="i_charge_max" type="text"></div>
-                        <div class="new_sub">Напряжение на выходе ИБП в случае работы без АКБ<input id="u_load_abc" type="text" placeholder="xxВ" onfocusout=""></div>
+                        <div class="new_sub">Глубина разряда АКБ при наличии входного напряжения<input id="discharge_depth" type="text" placeholder="xx%" onfocusout="check_input(this)"></div>
+                        <div class="new_sub">Максимальный ток нагрузки – ток отсечки<input id="i_load_max" type="text" placeholder="xxA" onfocusout="check_input(this)"></div>
+                        <div class="new_sub">Емкость АКБ<input id="q_akb" type="text" placeholder="xxxA&#183;ч" onfocusout="check_input(this)"></div>
+                        <div class="new_sub">Напряжение на выходе ИБП в случае работы без АКБ<input id="u_abc_max" type="text" placeholder="xxВ" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Часовой пояс
                             <select name="time_zone" id="time_zone" onchange="">
                                   <option value=0>0 ч</option>
@@ -172,6 +167,18 @@
                                   <option value=11>+11 ч</option>
                             </select>
                         </div>
+<!--                        <div class="new_sub">Глубина разряда АКБ при отсутствии входного напряжения<input id="discharge_akb" type="text" placeholder="xx%"></div>-->
+<!--                        <div class="new_sub">Время задержки срабатывания защиты при превышении тока нагрузки-->
+<!--                            <select name="t_delay" id="t_delay" onchange="">-->
+<!--                                  <option value='0'>1 мс</option>-->
+<!--                                  <option value='10'>10 мс</option>-->
+<!--                                  <option value='50'>50 мс</option>-->
+<!--                                  <option selected value='100'>100 мс</option>-->
+<!--                                  <option value='200'>200 мс</option>-->
+<!--                                  <option value='500'>500 мс</option>-->
+<!--                            </select>-->
+<!--                        </div>-->
+<!--                        <div class="new_sub">Значение максимального тока заряда АКБ<input id="i_charge_max" type="text"></div>-->
                     </fieldset>
                 </fieldset>
             </div>

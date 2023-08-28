@@ -28,5 +28,6 @@ CREATE TABLE ups_settings (
     q_akb TEXT DEFAULT '100',
     i_charge_max TEXT DEFAULT '10',
     u_load_abc TEXT DEFAULT '48',
-    discharge_depth TEXT DEFAULT '70'
+    discharge_depth TEXT DEFAULT '70',
+    max_temp_air TEXT DEFAULT '60'
 );

@@ -111,15 +111,17 @@ def update_temp(values):
     try:
         values['temp1'] = values['w1temp'][0].get_temperature()
         cnt1_error = 0
-    except IndexError:
+    except IndexError as _err:
         values['temp1'] = 0
+        to_status_log(msg=f'Temp1_error: {_err}')
         if cnt1_error < 3:
             to_human_log(msg='Датчик температуры на АКБ не подключен или вышел из строя!')
             cnt1_error += 1
     try:
         values['temp2'] = values['w1temp'][1].get_temperature()
         cnt2_error = 0
-    except IndexError:
+    except IndexError as _err:
+        to_status_log(msg=f'Temp2_error: {_err}')
         values['temp2'] = 0
         if cnt2_error < 3:
             to_human_log(msg='Датчик температуры в шкафу не подключен или вышел из строя!')
@@ -132,9 +134,9 @@ def get_error_status(cur, old):
     return cur
 
 
-def get_state_status(old, cur, err):
+def get_state_status(old, cur, err, st):
     if err == 0 and not cur == old:
-        to_human_log(msg=status_dict[cur])
+        to_human_log(msg=status_dict[st][cur])
     return cur
 
 
@@ -151,10 +153,11 @@ def get_stm_status(values):
     while True:
         # TODO try-exept for read data
         in_buf = list(s.read(size=62))
+        _u_akb4 = 0
         if len(in_buf) == 62:
             to_status_log(str(in_buf))
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
-            values['status'] = get_state_status(cur=in_buf[2], old=values['status'], err=values['err'])
+            values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{str(values["err"]):5}'
             values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
             values['iakb1'] = (in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])) / values['k_i_akb']
             values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.278
@@ -168,6 +171,7 @@ def get_stm_status(values):
                                   values['uakb3'] - values['uakb2'] - values['uakb1']
             if values['uakb4'] < 0:
                 values['uakb4'] = 0
+            _u_akb4 = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u_akb']
             # values['uakb4_0'] = in_buf[22] * 256 + in_buf[23]
             # 24 - F1
             values['iinv1'] = (in_buf[26] * 256 + in_buf[25]) / 10
@@ -186,6 +190,8 @@ def get_stm_status(values):
             values['einv3'] = (in_buf[53] * 256 + in_buf[52]) / 10
             values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] + values['iakb1']
             values['state'] = in_buf[57]
+            values['status'] = get_state_status(cur=in_buf[2], old=values['status'], err=values['err'],
+                                                st=values['state'])
             values['u_bv'] = (in_buf[58] * 256 + in_buf[59]) / 80
             values['rele_in'] = f'{in_buf[60]:04b}'[::-1]
             values['rele_out'] = f'{in_buf[61]:04b}'[::-1]
@@ -257,6 +263,7 @@ def get_stm_status(values):
                 values['discharge_abc'] = u_akb_dict[0][values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[0][30]
                 values['u_akb_max'] = u_akb_dict[0][100]
+            to_log(msg=f"d_u={(values['u_akb_max']*4 - _u_akb4):.1f}")
         s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
                                   format(int(float(values['discharge_akb']) * 10), '02x') +
                                   format(int(float(values['i_load_max'])), '02x') +
@@ -266,8 +273,17 @@ def get_stm_status(values):
                                   format(int(float(values['k_u_akb']) * 1000), '04x') +
                                   format(int(float(values['k_i_akb']) * 10), '04x') +
                                   format(int(float(values['t_delay']) / 10), '02x') +
-                                  format(int(float(values['temp2'])), '02x'))
-        to_status_log(str(list(s_out)))
+                                  format(int(float(values['temp2'])), '02x') +
+                                  format(int(float(values['max_temp_air'])), '02x') +
+                                  format(int(abs(values['iakb1']*10)), '02x') +
+                                  format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
+                                  format(int(abs(values['iakb1']*10)), '02x')
+                                  )
+        to_log(str(list(s_out)))
+        to_log(f"U_akb_max={in_buf[23]/10*4:.1f}; "
+               f"Uakb4={(in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
+               f"d_uakb={in_buf[21]/10:.1f}; u_load_abc={(in_buf[58] * 256 + in_buf[59])/80:.1f}; "
+               f"d_iakb={in_buf[22]/10:.1f}; ")
         s.write(s_out)
     # s.close()
 
@@ -332,6 +348,8 @@ def menu(values):
                 with open(f"/home/microlink/up_cur", 'r') as _file:
                     up_time += int(_file.readline().split(sep='.')[0]) / 3600
                     values['menu_0_6'] = f'Operating up;time {up_time:10.1f}h'
+            # to_status_log(msg=f'menu_{values["menu"]}_{values["submenu"]}')
+            # to_status_log(msg=values[f'menu_{values["menu"]}_{values["submenu"]}'])
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
             if values['edit']:
@@ -422,7 +440,7 @@ def press(values):
                     values['edit'] = True
                     lcd_byte(LCD_LINE_2, LCD_CMD)  # переход на 2 строку
                     lcd_byte(0x0F, LCD_CMD)  # 001111 мигающий курсор
-                if values['menu'] == 0 and 0 < values['submenu'] < 6:
+                if values['menu'] == 0 and 1 < values['submenu'] < 5:
                     values['menu'] = values['submenu']
                     values['submenu'] = 0
                     lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
@@ -435,8 +453,8 @@ def press(values):
 
 def lcd_time(values):
     values['menu_0_0'] = f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}'
-    values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0'
-    values['menu_5_0'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty'
+    # values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0'
+    # values['menu_5_0'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty'
     if values["menu"] == values["submenu"] == 0:
         lcd_string(values[f'menu_0_0'].split(sep=';')[1], LCD_LINE_2)
 
@@ -482,10 +500,9 @@ err_dict = {4: 'Критическая ошибка - датчик тока вы
             32: 'Критическая ошибка - перегрузка по напряжению!',
             64: 'Критическая ошибка - перегрузка по току!',
             128: 'Критическая ошибка - перегрев АКБ!'}
-status_dict = {192: 'Работа от АКБ',
-               193: 'Работа от сети без АКБ',
-               194: 'Буферный режим - заряд АКБ',
-               196: 'Буферный режим - разряд АКБ'}
+status_dict = {0: {196: 'Работа от АКБ - разряд АКБ'},
+               1: {193: 'Работа от сети без АКБ'},
+               2: {194: 'Буферный режим - заряд АКБ', 196: 'Буферный режим - разряд АКБ'}}
 status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0, 'uload': 0,
                  'bat': 100, 't_bat': 2, 'iload': 0, 'tinv1': 0, 'tinv2': 0, 'tinv3': 0, 'einv1': 0, 'einv2': 0,
                  'einv3': 0, 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
@@ -501,10 +518,11 @@ status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, '
                  'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 4,
                  'sub_cnt5': 0, 'edit': False, 'rele_in': '0000', 'rele_out': '0000',
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
-                 'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0',
-                 'menu_0_4': 'Settings; ', 'menu_0_5': 'Logs; ', 'menu_0_6': f'Operating up;time {up_time:10.1f}h',
-                 'menu_1_0': 'Ini error:;empty', 'menu_5_0': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty',
-                 'discharge_depth': int(ups_set[10]), 'max_temp_air': int(ups_set[11])}
+                 'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:    0',
+                 'menu_0_4': 'Settings; ', 'menu_0_5': 'IP address:; ',
+                 'menu_0_6': f'Operating up;time {up_time:10.1f}h',
+                 'discharge_depth': int(ups_set[10]), 'max_temp_air': int(ups_set[11]),
+                 'ip_addr': '192.168.1.10', 'ip_mask': '255.255.255.0', 'ip_gate': '192.168.1.1'}
 # u_load_max TEXT DEFAULT '4000',    1
 # i_load_max TEXT DEFAULT '90'       2
 # t_charge_max TEXT DEFAULT '20',    3
@@ -528,7 +546,12 @@ status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]
 status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]:15}V'
 status_values['menu_4_4'] = f'Max temperature:;{status_values["max_temp_air"]:15}C'
 # status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
-
+with open(f"/etc/network/interfaces", 'r') as _file:
+    settings = _file.readlines()
+status_values['ip_addr'] = settings[4].split('\n')[0].split(' ')[-1]
+status_values['ip_mask'] = settings[5].split('\n')[0].split(' ')[-1]
+status_values['ip_gate'] = settings[6].split('\n')[0].split(' ')[-1]
+status_values['menu_0_5'] = f"IP address:;{status_values['ip_addr']:16}"
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'xtkjdtxrb;bkbljkuj'
 application = app
@@ -678,7 +701,7 @@ def logout():
 def index():
     if request.method == "POST":
         json_data = request.get_json()
-        to_log(f'=> {json_data}')
+        # to_log(f'=> {json_data}')
         session['ip_address'] = request.remote_addr
         # if json_data['action'] == 'validate':
         #     conn = get_db_connection()
@@ -769,6 +792,10 @@ def index():
                 'q_akb': status_values['q_akb'],
                 'u_abc_max': status_values['u_abc_max'],
                 'i_load_max': status_values['i_load_max'],
+                'max_temp_air': status_values['max_temp_air'],
+                'ip_addr': status_values['ip_addr'],
+                'ip_mask': status_values['ip_mask'],
+                'ip_gate': status_values['ip_gate'],
                 'time_zone': 3,
             }
         if json_data['action'] == 'update':
@@ -783,7 +810,12 @@ def index():
             status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]:15}%'
             status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]:15}V'
             status_values['menu_4_4'] = f'Max temperature:;{status_values["max_temp_air"]:15}C'
-
+        if json_data['action'] == 'update_ip':
+            status_values[json_data['status_values']] = json_data['value']
+            to_human_log(msg=f"Изменили {json_data['status_values']} на {json_data['value']}")
+            with open(f"/home/microlink/ip_cur", 'w') as cur_f:
+                cur_f.writelines([f"{status_values['ip_addr']}\n", f"{status_values['ip_mask']}\n",
+                                  f"{status_values['ip_gate']}\n"])
     return render_template("index.html")
     # if 'login' in session:
     #     _login = session['login']
@@ -884,4 +916,5 @@ def system():
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.8.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.1.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo service networking restart
+# MYIPV4=$(ip addr show end0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
 # cat /etc/armbianmonitor/datasources/soctemp

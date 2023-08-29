@@ -1,9 +1,13 @@
 // INPUTMASK //
 document.addEventListener('DOMContentLoaded', function () {
-    $("#i_load_max").inputmask({mask: "9{1,2}A", placeholder: '0'});
-    $("#discharge_depth").inputmask({mask: "9{1,2}%", placeholder: '0'});
-    $("#q_akb").inputmask({mask: "9{1,3}А\u00B7ч", placeholder: '0'});
-    $("#u_abc_max").inputmask({mask: "9{1,2}B", placeholder: '0'});
+    $("#i_load_max").inputmask({mask: "9{2}A", placeholder: '_'});
+    $("#discharge_depth").inputmask({mask: "9{2}%", placeholder: '_'});
+    $("#q_akb").inputmask({mask: "9{2,3}А\u00B7ч", placeholder: '_'});
+    $("#u_abc_max").inputmask({mask: "9{2}B", placeholder: '_'});
+    $("#max_temp_air").inputmask({mask: "9{2}\u00B0C", placeholder: '_'});
+    $("#ip_addr").inputmask({alias: "ip",greedy: false});
+    $("#ip_mask").inputmask({alias: "ip",greedy: false});
+    $("#ip_gate").inputmask({alias: "ip",greedy: false});
 });
 // ----- //
 // START //
@@ -314,6 +318,10 @@ function show_fieldset(number) {
                                 document.getElementById('q_akb').value = response.q_akb+'A\u00B7ч';
                                 document.getElementById('u_abc_max').value = response.u_abc_max+'B';
                                 document.getElementById('time_zone').value = response.time_zone;
+                                document.getElementById('max_temp_air').value = response.max_temp_air;
+                                document.getElementById('ip_addr').value = response.ip_addr;
+                                document.getElementById('ip_mask').value = response.ip_mask;
+                                document.getElementById('ip_gate').value = response.ip_gate;
                             }
                         })
                     }
@@ -333,6 +341,21 @@ function check_input(el) {
         method : 'POST',
         body : JSON.stringify( {
             'action' : 'update',
+            'status_values': el.id,
+            'value' : text,
+        })
+    })
+}
+
+function check_input_ip(el) {
+    let text = el.value;
+    fetch('/index', {
+        headers : {
+            'Content-Type' : 'application/json'
+        },
+        method : 'POST',
+        body : JSON.stringify( {
+            'action' : 'update_ip',
             'status_values': el.id,
             'value' : text,
         })

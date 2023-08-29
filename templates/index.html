@@ -134,14 +134,12 @@
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_2">
                     <legend style="text-align: left;">Установки</legend>
-                    <fieldset class="ip-fieldset">
+                    <fieldset style="width: 80vh;">
                         <legend style="text-align: left; font-size: 2.5vh;">Сетевые</legend>
-                        <div class="ip">
-                            <div>IP адрес:   192.168.1.52</div>
-                            <div>Маска сети: 255.255.255.0</div>
-                            <div>Шлюз:       192.168.1.111</div>
-                        </div>
-                        <div><img class="pid_key_small" src="{{url_for('static',filename='images/buttons/ip_set.png')}}" alt="Изменить ip" style="width: 5vh; height: 5vh;"></div>
+                        <div class="new_sub">IP адрес:<input id="ip_addr" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
+                        <div class="new_sub">Маска сети:<input id="ip_mask" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
+                        <div class="new_sub">Шлюз:<input id="ip_gate" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
+<!--                        <div><img class="pid_key_small" src="{{url_for('static',filename='images/buttons/ip_set.png')}}" alt="Изменить ip" style="width: 5vh; height: 5vh;"></div>-->
 <!--                        onclick="return new_ip.init();"-->
                     </fieldset>
                     <fieldset style="width: 80vh;">
@@ -151,6 +149,7 @@
                         <div class="new_sub">Максимальный ток нагрузки – ток отсечки<input id="i_load_max" type="text" placeholder="xxA" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Емкость АКБ<input id="q_akb" type="text" placeholder="xxxA&#183;ч" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Напряжение на выходе ИБП в случае работы без АКБ<input id="u_abc_max" type="text" placeholder="xxВ" onfocusout="check_input(this)"></div>
+                        <div class="new_sub">Максимальная температура в шкафу<input id="max_temp_air" type="text" placeholder="xx&deg;С" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Часовой пояс
                             <select name="time_zone" id="time_zone" onchange="">
                                   <option value=0>0 ч</option>

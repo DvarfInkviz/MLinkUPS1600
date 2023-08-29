@@ -25,7 +25,6 @@ CREATE TABLE ups_settings (
     discharge_abc TEXT DEFAULT '48',
     discharge_akb TEXT DEFAULT '48',
     t_delay TEXT DEFAULT '100',
-    q_akb TEXT DEFAULT '100',
     i_charge_max TEXT DEFAULT '10',
     u_load_abc TEXT DEFAULT '48',
     discharge_depth TEXT DEFAULT '70',

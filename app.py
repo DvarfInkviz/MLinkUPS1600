@@ -110,6 +110,7 @@ def update_temp(values):
     global cnt2_error
     try:
         values['temp1'] = values['w1temp'][0].get_temperature()
+        values['menu_3_1'] = f'Q={values["i_charge_max"]*10:5} Ah;T={values["temp1"]:5.1f} C'
         cnt1_error = 0
     except IndexError as _err:
         values['temp1'] = 0
@@ -157,7 +158,7 @@ def get_stm_status(values):
         if len(in_buf) == 62:
             to_status_log(str(in_buf))
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
-            values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{str(values["err"]):5}'
+            values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{values["err"]:5}'
             values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
             values['iakb1'] = (in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])) / values['k_i_akb']
             values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.278
@@ -254,7 +255,7 @@ def get_stm_status(values):
             values['menu_2_1'] = f'UA={values["ua"]} UB={values["ub"]};UC={values["uc"]}'
             values['menu_3_0'] = f'U1={values["uakb1"]:.1f} U2={values["uakb2"]:.1f};U3={values["uakb3"]:.1f} ' \
                                  f'U4={values["uakb4"]:.1f}'
-            values['menu_3_1'] = f'Q={values["q_akb"]}Ah;T={values["temp1"]:.1f}'
+            values['menu_3_1'] = f'Q={values["i_charge_max"]*10:5} Ah;T={values["temp1"]:5.1f} C'
             if values['temp1'] > 20:
                 values['discharge_abc'] = u_akb_dict[40][values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[40][30]
@@ -366,6 +367,7 @@ def menu(values):
                 if values["submenu"] == 1 and values["i_charge_max"] > 4:
                     values["i_charge_max"] -= 1
                     values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10:14}Ah'
+                    values['menu_3_1'] = f'Q={values["i_charge_max"]*10:5} Ah;T={values["temp1"]:5.1f} C'
                 if values["submenu"] == 2 and values["discharge_depth"] > 30:
                     values["discharge_depth"] -= 10
                     values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]:15}%'
@@ -453,8 +455,6 @@ def press(values):
 
 def lcd_time(values):
     values['menu_0_0'] = f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}'
-    # values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Errors:        0'
-    # values['menu_5_0'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};empty'
     if values["menu"] == values["submenu"] == 0:
         lcd_string(values[f'menu_0_0'].split(sep=';')[1], LCD_LINE_2)
 
@@ -506,52 +506,48 @@ status_dict = {0: {196: 'Работа от АКБ - разряд АКБ'},
 status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0, 'uload': 0,
                  'bat': 100, 't_bat': 2, 'iload': 0, 'tinv1': 0, 'tinv2': 0, 'tinv3': 0, 'einv1': 0, 'einv2': 0,
                  'einv3': 0, 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
-                 'temp1': 0, 'temp1_id': '',  # temp akb
-                 'temp2': 0, 'temp2_id': '',  # air temp
-                 # 'u_akb_min': ups_set[1], 'u_akb_max': ups_set[2], 'i_akb_min': ups_set[3], 'i_akb_max': ups_set[4],
-                 'uabc_min': 180, 'uabc_max': 240, 'u_abc_alarm_min': 120, 'u_abc_alarm_max': 260,
-                 'u_akb_max': u_akb_dict[40][100], 'i_load_max': int(ups_set[2]),
-                 't_charge_max': ups_set[3], 'discharge_abc': ups_set[4], 'discharge_akb': int(ups_set[5]),
-                 't_delay': int(ups_set[6]), 'q_akb': ups_set[7], 'i_charge_max': int(ups_set[8]),
-                 'u_abc_max': int(ups_set[9]), 'state': -1, 'err': 0, 'status': 0, 'u_load_max': 0, 'u_bv': 0,
-                 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2,
-                 'menu': 0, 'submenu': 0, 'sub_cnt0': 6, 'sub_cnt1': 0, 'sub_cnt2': 4, 'sub_cnt3': 2, 'sub_cnt4': 4,
-                 'sub_cnt5': 0, 'edit': False, 'rele_in': '0000', 'rele_out': '0000',
-                 'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'menu_0_2': 'Inverter; ',
-                 'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:    0',
-                 'menu_0_4': 'Settings; ', 'menu_0_5': 'IP address:; ',
-                 'menu_0_6': f'Operating up;time {up_time:10.1f}h',
-                 'discharge_depth': int(ups_set[10]), 'max_temp_air': int(ups_set[11]),
-                 'ip_addr': '192.168.1.10', 'ip_mask': '255.255.255.0', 'ip_gate': '192.168.1.1'}
+                 'temp1': 0, 'temp1_id': '', 'temp2': 0, 'temp2_id': '', 'uabc_min': 180, 'uabc_max': 240,
+                 'u_abc_alarm_min': 120, 'u_abc_alarm_max': 260, 'u_akb_max': u_akb_dict[40][100],
+                 'i_load_max': int(ups_set[2]), 't_charge_max': ups_set[3], 'discharge_abc': ups_set[4],
+                 'discharge_akb': int(ups_set[5]), 't_delay': int(ups_set[6]), 'i_charge_max': int(ups_set[7]),
+                 'u_abc_max': int(ups_set[8]), 'state': -1, 'err': 0, 'status': 0,
+                 'u_load_max': 0, 'u_bv': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2, 'menu': 0, 'submenu': 0,
+                 'edit': False, 'rele_in': '0000', 'rele_out': '0000',
+                 'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'sub_cnt0': 6,
+                 'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:    0', 'sub_cnt1': 0,
+                 'menu_0_2': 'Inverter      >>; ', 'sub_cnt2': 1,
+                 'menu_0_3': 'Battery       >>; ', 'sub_cnt3': 1,
+                 'menu_0_4': 'Settings      >>; ', 'sub_cnt4': 4,
+                 'menu_0_5': 'IP address:; ', 'sub_cnt5': 0,
+                 'menu_0_6': f'Operating up;time {up_time:10.1f}h', 'discharge_depth': int(ups_set[9]), 'sub_cnt6': 0,
+                 'max_temp_air': int(ups_set[10]), 'ip_addr': '192.168.1.10', 'ip_mask': '255.255.255.0',
+                 'ip_gate': '192.168.1.1'}
 # u_load_max TEXT DEFAULT '4000',    1
 # i_load_max TEXT DEFAULT '90'       2
 # t_charge_max TEXT DEFAULT '20',    3
 # discharge_abc TEXT DEFAULT '48',   4
 # discharge_akb TEXT DEFAULT '48',   5
 # t_delay TEXT DEFAULT '100',        6
-# q_akb TEXT DEFAULT '100',          7
-# i_charge_max TEXT DEFAULT '10',    8
-# u_abc_max TEXT DEFAULT '48'        9
-# discharge_depth TEXT DEFAULT '30'  10
-# max_temp_air TEXT DEFAULT '60'     11
-status_values['menu_0_3'] = f'Battery - {status_values["bat"]}%;t charge - {status_values["t_bat"]}h'
+# i_charge_max TEXT DEFAULT '10',    7
+# u_abc_max TEXT DEFAULT '48'        8
+# discharge_depth TEXT DEFAULT '30'  9
+# max_temp_air TEXT DEFAULT '60'     10
 status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iinv2"]};I3={status_values["iinv3"]}'
 status_values['menu_2_1'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
 status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uakb2"]};U3={status_values["uakb3"]} ' \
                             f'U4={status_values["uakb4"]}'
-status_values['menu_3_1'] = f'Q={status_values["q_akb"]}Ah;T={status_values["temp1"]}'
+status_values['menu_3_1'] = f'Q={status_values["i_charge_max"]*10:5} Ah;T={status_values["temp1"]:5.1f} C'
 status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]:15}A'
 status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"]*10:14}Ah'
 status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]:15}%'
 status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]:15}V'
 status_values['menu_4_4'] = f'Max temperature:;{status_values["max_temp_air"]:15}C'
-# status_values['menu_4_3'] = f'Protection time:;{status_values["t_delay"]}ms'
 with open(f"/etc/network/interfaces", 'r') as _file:
     settings = _file.readlines()
 status_values['ip_addr'] = settings[4].split('\n')[0].split(' ')[-1]
 status_values['ip_mask'] = settings[5].split('\n')[0].split(' ')[-1]
 status_values['ip_gate'] = settings[6].split('\n')[0].split(' ')[-1]
-status_values['menu_0_5'] = f"IP address:;{status_values['ip_addr']:16}"
+status_values['menu_0_5'] = f"IP address:;{status_values['ip_addr']:>16}"
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'xtkjdtxrb;bkbljkuj'
 application = app
@@ -789,7 +785,7 @@ def index():
             return {
                 'status': 'ok',
                 'discharge_depth': status_values['discharge_depth'],
-                'q_akb': status_values['q_akb'],
+                'q_akb': status_values["i_charge_max"]*10,
                 'u_abc_max': status_values['u_abc_max'],
                 'i_load_max': status_values['i_load_max'],
                 'max_temp_air': status_values['max_temp_air'],

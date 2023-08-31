@@ -201,7 +201,7 @@ function request_status() {
                     document.getElementById('iinv3').textContent  = response.iinv3+' A';
                     document.getElementById('temp_akb').textContent = response.temp_akb+' \u00B0C';
                     document.getElementById('temp_air').textContent = response.temp_air+' \u00B0C';
-                    document.getElementById('temp_cpu').textContent = response.temp_cpu+' \u00B0C';
+//                    document.getElementById('temp_cpu').textContent = response.temp_cpu+' \u00B0C';
                     document.getElementById('dry1_in').classList.toggle('rele_in_up', response.dry1_in);
                     document.getElementById('dry2_in').classList.toggle('rele_in_up', response.dry2_in);
                     document.getElementById('dry3_in').classList.toggle('rele_in_up', response.dry3_in);

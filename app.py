@@ -65,13 +65,11 @@ def to_human_log(session_val=None, msg=''):
         with open(f"/var/www/{PROJECT_NAME}/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'w',
                   encoding='utf-8') as _file:
             _file.write(f"human log starts {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}\n-=-=-=-=-=-=-\n")
-            _file.write(datetime.now().strftime("%d%m%Y %H:%M:%S.%s# ") + session_val['ip_address'] + ' # ' +
-                        msg + '\n')
+            _file.write(datetime.now().strftime("%d%m%Y %H:%M:%S.%s# ") + msg + '\n')
     else:
         with open(f"/var/www/{PROJECT_NAME}/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'a',
                   encoding='utf-8') as _f:
-            _f.write(datetime.now().strftime("%d%m%Y %H:%M:%S.%s# ") + session_val['ip_address'] + ' # ' +
-                     msg + '\n')
+            _f.write(datetime.now().strftime("%d%m%Y %H:%M:%S.%s# ") + msg + '\n')
 
 
 def to_log(msg):
@@ -138,6 +136,10 @@ def get_error_status(cur, old):
 def get_state_status(old, cur, err, st):
     if err == 0 and not cur == old:
         to_human_log(msg=status_dict[st][cur])
+        if cur == 194:
+            status_values['start_charge'] = datetime.now()
+        if cur == 196:
+            status_values['t_charge_mode'] = datetime.now() - status_values['start_charge']
     return cur
 
 
@@ -153,49 +155,46 @@ def get_stm_status(values):
     _first = True
     while True:
         # TODO try-exept for read data
-        in_buf = list(s.read(size=62))
+        in_buf = list(s.read(size=59))
         _u_akb4 = 0
-        if len(in_buf) == 62:
+        if len(in_buf) == 59:
             to_status_log(str(in_buf))
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
             values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{values["err"]:5}'
-            values['iakb1_0'] = in_buf[4] * 256 + in_buf[5]
-            values['iakb1'] = (in_buf[7] * 256 + in_buf[8] - (in_buf[4] * 256 + in_buf[5])) / values['k_i_akb']
-            values['uakb1'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.278
-            values['uakb2'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * 1.208 - values['uakb1']
-            values['uakb3'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * 1.189 - values['uakb2'] - \
+            values['iakb1'] = (in_buf[4] * 256 + in_buf[5] - IAKB1_0) / values['k_i_akb']
+            values['uakb1'] = (in_buf[7] * 256 + in_buf[8]) * 3.3 / 4096 * 20 * 1.278
+            values['uakb2'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.208 - values['uakb1']
+            values['uakb3'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * 1.189 - values['uakb2'] - \
                               values['uakb1']
             if values['uakb1'] == values['uakb2'] == values['uakb3'] == 0:
                 values['uakb4'] = 0
             else:
-                values['uakb4'] = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u_akb'] - \
+                values['uakb4'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb'] - \
                                   values['uakb3'] - values['uakb2'] - values['uakb1']
-            if values['uakb4'] < 0:
-                values['uakb4'] = 0
-            _u_akb4 = (in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u_akb']
+            _u_akb4 = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb']
             # values['uakb4_0'] = in_buf[22] * 256 + in_buf[23]
-            # 24 - F1
-            values['iinv1'] = (in_buf[26] * 256 + in_buf[25]) / 10
-            values['ua'] = in_buf[28] * 256 + in_buf[27]
-            values['tinv1'] = in_buf[29]
-            values['einv1'] = (in_buf[31] * 256 + in_buf[30]) / 10
-            # 35 - F2
-            values['iinv2'] = (in_buf[37] * 256 + in_buf[36]) / 10
-            values['ub'] = in_buf[39] * 256 + in_buf[38]
-            values['tinv2'] = in_buf[40]
-            values['einv2'] = (in_buf[42] * 256 + in_buf[41]) / 10
-            # 46 - F3
-            values['iinv3'] = (in_buf[48] * 256 + in_buf[47]) / 10
-            values['uc'] = in_buf[50] * 256 + in_buf[49]
-            values['tinv3'] = in_buf[51]
-            values['einv3'] = (in_buf[53] * 256 + in_buf[52]) / 10
+            # 21 - F1
+            values['iinv1'] = (in_buf[23] * 256 + in_buf[22]) / 10
+            values['ua'] = in_buf[25] * 256 + in_buf[24]
+            values['tinv1'] = in_buf[26]
+            values['einv1'] = (in_buf[28] * 256 + in_buf[27]) / 10
+            # 29 - F2
+            values['iinv2'] = (in_buf[31] * 256 + in_buf[30]) / 10
+            values['ub'] = in_buf[33] * 256 + in_buf[32]
+            values['tinv2'] = in_buf[34]
+            values['einv2'] = (in_buf[36] * 256 + in_buf[35]) / 10
+            # 37 - F3
+            values['iinv3'] = (in_buf[39] * 256 + in_buf[38]) / 10
+            values['uc'] = in_buf[41] * 256 + in_buf[40]
+            values['tinv3'] = in_buf[42]
+            values['einv3'] = (in_buf[44] * 256 + in_buf[43]) / 10
             values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] + values['iakb1']
-            values['state'] = in_buf[57]
+            values['state'] = in_buf[45]
             values['status'] = get_state_status(cur=in_buf[2], old=values['status'], err=values['err'],
                                                 st=values['state'])
-            values['u_bv'] = (in_buf[58] * 256 + in_buf[59]) / 80
-            values['rele_in'] = f'{in_buf[60]:04b}'[::-1]
-            values['rele_out'] = f'{in_buf[61]:04b}'[::-1]
+            values['u_bv'] = (in_buf[46] * 256 + in_buf[47]) / 80
+            values['rele_in'] = f'{in_buf[48]:04b}'[::-1]
+            values['rele_out'] = f'{in_buf[49]:04b}'[::-1]
             if _first:
                 if _m < cnt_m - 1:
                     _m_list[0][_m] = values['iakb1']
@@ -239,9 +238,12 @@ def get_stm_status(values):
                     values['iload'] = _sum[5] / cnt_m
                 else:
                     _m = 0
+            if values['iload'] < 0.5:
+                values['iload'] = 0
             values['uload'] = values['uakb1'] + values['uakb2'] + values['uakb3'] + values['uakb4']
+            if values['uakb4'] < 0:
+                values['uakb4'] = 0
             stm_out = f"Код ошибки: E0_{format(in_buf[1], '02x').upper()}, статус код: {hex(in_buf[2])[2:].upper()}, " \
-                      f"Iakb1_0 = {values['iakb1_0']}, " \
                       f"Iakb1 = {values['iakb1']:.2f}, " \
                       f"Uakb1 = {values['uakb1']:.2f}, " \
                       f"Uakb2 = {values['uakb2']:.2f}, " \
@@ -264,7 +266,7 @@ def get_stm_status(values):
                 values['discharge_abc'] = u_akb_dict[0][values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[0][30]
                 values['u_akb_max'] = u_akb_dict[0][100]
-            to_log(msg=f"d_u={(values['u_akb_max']*4 - _u_akb4):.1f}")
+            # to_log(msg=f"d_u={(values['u_akb_max']*4 - _u_akb4):.1f}")
         s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
                                   format(int(float(values['discharge_akb']) * 10), '02x') +
                                   format(int(float(values['i_load_max'])), '02x') +
@@ -278,13 +280,13 @@ def get_stm_status(values):
                                   format(int(float(values['max_temp_air'])), '02x') +
                                   format(int(abs(values['iakb1']*10)), '02x') +
                                   format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
-                                  format(int(abs(values['iakb1']*10)), '02x')
+                                  format(int(abs(values['uload']*10)), '04x')
                                   )
         to_log(str(list(s_out)))
-        to_log(f"U_akb_max={in_buf[23]}; "
-               f"Uakb4={(in_buf[19] * 256 + in_buf[20]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
-               f"d_uakb={in_buf[21]/10:.1f}; u_load_abc={(in_buf[58] * 256 + in_buf[59])/80:.1f}; "
-               f"d_iakb={in_buf[22]/10:.1f}; ")
+        to_log(f"U_akb_max={in_buf[20]}; "
+               f"Uakb4={(in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
+               f"d_uakb={in_buf[18]/10:.1f}; u_load_abc={(in_buf[46] * 256 + in_buf[47])/80:.1f}; "
+               f"d_iakb={in_buf[19]/10:.1f}; E0_{format(in_buf[1], '02x').upper()}; {hex(in_buf[2])[2:].upper()}")
         s.write(s_out)
     # s.close()
 
@@ -416,17 +418,26 @@ def press(values):
                     if values['submenu'] == 0:
                         _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1',
                                       (str(values["i_load_max"]),))
+                        to_human_log(msg=f'Установлено новое значение - Максимальный ток нагрузки – ток отсечки: '
+                                         f'{values["i_load_max"]}A')
                     if values['submenu'] == 1:
                         _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
                                       (str(values["i_charge_max"]),))
+                        to_human_log(msg=f'Установлено новое значение - Емкость АКБ: {values["i_load_max"]*10}Ah')
                     if values['submenu'] == 2:
                         _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
                                       (str(values["discharge_depth"]),))
+                        to_human_log(msg=f'Установлено новое значение - Глубина разряда АКБ при наличии входного '
+                                         f'напряжения: {values["discharge_depth"]}%')
                     if values['submenu'] == 3:
                         _conn.execute('UPDATE ups_settings SET u_abc_max = ? WHERE id =1', (str(values["u_abc_max"]),))
+                        to_human_log(msg=f'Установлено новое значение - Напряжение на выходе ИБП в случае '
+                                         f'работы без АКБ: {values["u_abc_max"]}B')
                     if values['submenu'] == 4:
                         _conn.execute('UPDATE ups_settings SET max_temp_air = ? WHERE id =1',
                                       (str(values["max_temp_air"]),))
+                        to_human_log(msg=f'Установлено новое значение - Максимальная температура в шкафу: '
+                                         f'{values["max_temp_air"]}C')
                     _conn.commit()
                     _conn.close()
                     lcd_byte(LCD_LINE_1, LCD_CMD)  # переход на 1 строку
@@ -470,6 +481,7 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
+IAKB1_0 = 1480
 scheduler = BackgroundScheduler()
 scheduler.start()
 temp_time = 1
@@ -503,14 +515,15 @@ err_dict = {4: 'Критическая ошибка - датчик тока вы
 status_dict = {0: {196: 'Работа от АКБ - разряд АКБ'},
                1: {193: 'Работа от сети без АКБ'},
                2: {194: 'Буферный режим - заряд АКБ', 196: 'Буферный режим - разряд АКБ'}}
-status_values = {'iakb1_0': 0, 'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0, 'uload': 0,
+status_values = {'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'uakb4_0': 0, 'uload': 0,
                  'bat': 100, 't_bat': 2, 'iload': 0, 'tinv1': 0, 'tinv2': 0, 'tinv3': 0, 'einv1': 0, 'einv2': 0,
-                 'einv3': 0, 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 220, 'ub': 220, 'uc': 220, 'w1temp': [],
+                 'einv3': 0, 'iinv1': 0, 'iinv2': 0, 'iinv3': 0, 'ua': 0, 'ub': 0, 'uc': 0, 'w1temp': [],
                  'temp1': 0, 'temp1_id': '', 'temp2': 0, 'temp2_id': '', 'uabc_min': 180, 'uabc_max': 240,
                  'u_abc_alarm_min': 120, 'u_abc_alarm_max': 260, 'u_akb_max': u_akb_dict[40][100],
                  'i_load_max': int(ups_set[2]), 't_charge_max': ups_set[3], 'discharge_abc': ups_set[4],
                  'discharge_akb': int(ups_set[5]), 't_delay': int(ups_set[6]), 'i_charge_max': int(ups_set[7]),
                  'u_abc_max': int(ups_set[8]), 'state': -1, 'err': 0, 'status': 0,
+                 't_charge_mode': 0, 'start_charge': 0,
                  'u_load_max': 0, 'u_bv': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2, 'menu': 0, 'submenu': 0,
                  'edit': False, 'rele_in': '0000', 'rele_out': '0000',
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'sub_cnt0': 6,
@@ -718,8 +731,7 @@ def index():
         if json_data['action'] == 'start':
             return {
                 'connection': 'on',
-                'version': 'arm.0.5, mcu.1.3',
-                'iakb1_0': f'{status_values["iakb1_0"]}',
+                'version': 'arm.0.6, mcu.1.5',
             }
         if json_data['action'] == 'status':
             with open(f"/etc/armbianmonitor/datasources/soctemp", 'r') as _file:
@@ -772,7 +784,8 @@ def index():
                 'iinv3': f'{status_values["iinv3"]:.1f}',
                 'temp_akb': f'{status_values["temp1"]:.1f}',
                 'temp_air': f'{status_values["temp2"]:.1f}',
-                'temp_cpu': f'{soc_t:.1f}'
+                'temp_cpu': f'{soc_t:.1f}',
+                't_charge_mode': f'{status_values["t_charge_mode"]}'
             }
         if json_data['action'] == 'get_journal':
             with open(f"/var/www/{PROJECT_NAME}/logs/human_{datetime.now().strftime('%d%m%Y')}.log", 'r',
@@ -793,6 +806,7 @@ def index():
                 'ip_addr': status_values['ip_addr'],
                 'ip_mask': status_values['ip_mask'],
                 'ip_gate': status_values['ip_gate'],
+                'datetime': datetime.now().strftime('%Y-%m-%d %H:%M'),
                 'time_zone': 3,
             }
         if json_data['action'] == 'update':

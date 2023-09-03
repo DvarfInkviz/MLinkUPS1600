@@ -22,7 +22,7 @@
             <div class="main-buttons">
                 <a href="#information" style="width: 100%;" onclick="return show_fieldset('0')" id="ah_0"><button class="btn_menu" id="btn_0">Состояние</button></a>
                 <a href="#logs" style="width: 100%;" onclick="return show_fieldset('1')" id="ah_1"><button class="btn_menu" id="btn_1">Журнал</button></a>
-                <a href="#settings" style="width: 100%;" onclick="return show_fieldset('2')" id="ah_2"><button class="btn_menu" id="btn_2">Установки</button></a>
+                <a href="#settings" style="width: 100%;" onclick="return show_fieldset('2')" id="ah_2"><button class="btn_menu" id="btn_2">Уставки</button></a>
             </div>
             <div class="main-base" id="main-base" style="padding: 0 1.38vh;">
                 <fieldset class="base-fieldset" style="z-index: 100; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_0">
@@ -116,17 +116,21 @@
                         </div>
                         <fieldset class="dry_in-fieldset">
                             <legend style="text-align: left; font-size: 2vh;">Входные сухие контакты</legend>
-                            <fieldset class="led_status" id="dry1_in"></fieldset>
-                            <fieldset class="led_status" id="dry2_in"></fieldset>
-                            <fieldset class="led_status" id="dry3_in"></fieldset>
-                            <fieldset class="led_status" id="dry4_in"></fieldset>
+                            <fieldset class="led_status" id="dry1_in">1</fieldset>
+                            <fieldset class="led_status" id="dry2_in">2</fieldset>
+                            <fieldset class="led_status" id="dry3_in">3</fieldset>
+                            <fieldset class="led_status" id="dry4_in">4</fieldset>
                         </fieldset>
                         <fieldset class="dry_out-fieldset">
                             <legend style="text-align: left; font-size: 2vh;">Выходные сухие контакты</legend>
-                            <fieldset class="led_status" id="dry1_out"></fieldset>
-                            <fieldset class="led_status" id="dry2_out"></fieldset>
-                            <fieldset class="led_status" id="dry3_out"></fieldset>
-                            <fieldset class="led_status" id="dry4_out"></fieldset>
+                            <fieldset class="led_status" id="dry1_out">1</fieldset>
+                            <fieldset class="led_status" id="dry2_out">2</fieldset>
+                            <fieldset class="led_status" id="dry3_out">3</fieldset>
+                            <fieldset class="led_status" id="dry4_out">4</fieldset>
+                        </fieldset>
+                        <fieldset class="dry_out-fieldset">
+                            <legend style="text-align: left; font-size: 2vh;">Длительность последнего заряда АКБ</legend>
+                            <div class="current" id="t_charge_mode" style="padding: 2vh;">0:00:00.0</div>
                         </fieldset>
                     </div>
                 </fieldset>
@@ -135,9 +139,9 @@
                     <div style="overflow: auto; height: 74vh; width: 100%;" id="journal"></div>
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_2">
-                    <legend style="text-align: left;">Установки</legend>
+                    <legend style="text-align: left;">Уставки</legend>
                     <fieldset style="width: 80vh;">
-                        <legend style="text-align: left; font-size: 2.5vh;">Сетевые</legend>
+                        <legend style="text-align: left; font-size: 2.5vh;">Сеть</legend>
                         <div class="new_sub">IP адрес:<input id="ip_addr" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
                         <div class="new_sub">Маска сети:<input id="ip_mask" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
                         <div class="new_sub">Шлюз:<input id="ip_gate" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
@@ -145,13 +149,29 @@
 <!--                        onclick="return new_ip.init();"-->
                     </fieldset>
                     <fieldset style="width: 80vh;">
-                        <legend style="text-align: left; font-size: 2.5vh;">АКБ</legend>
+                        <legend style="text-align: left; font-size: 2.5vh;">UPS 1600</legend>
 <!--                        onfocusout="check_input(this)"-->
                         <div class="new_sub">Глубина разряда АКБ при наличии входного напряжения<input id="discharge_depth" type="text" placeholder="xx%" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Максимальный ток нагрузки – ток отсечки<input id="i_load_max" type="text" placeholder="xxA" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Емкость АКБ<input id="q_akb" type="text" placeholder="xxxA&#183;ч" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Напряжение на выходе ИБП в случае работы без АКБ<input id="u_abc_max" type="text" placeholder="xxВ" onfocusout="check_input(this)"></div>
                         <div class="new_sub">Максимальная температура в шкафу<input id="max_temp_air" type="text" placeholder="xx&deg;С" onfocusout="check_input(this)"></div>
+<!--                        <div class="new_sub">Глубина разряда АКБ при отсутствии входного напряжения<input id="discharge_akb" type="text" placeholder="xx%"></div>-->
+<!--                        <div class="new_sub">Время задержки срабатывания защиты при превышении тока нагрузки-->
+<!--                            <select name="t_delay" id="t_delay" onchange="">-->
+<!--                                  <option value='0'>1 мс</option>-->
+<!--                                  <option value='10'>10 мс</option>-->
+<!--                                  <option value='50'>50 мс</option>-->
+<!--                                  <option selected value='100'>100 мс</option>-->
+<!--                                  <option value='200'>200 мс</option>-->
+<!--                                  <option value='500'>500 мс</option>-->
+<!--                            </select>-->
+<!--                        </div>-->
+<!--                        <div class="new_sub">Значение максимального тока заряда АКБ<input id="i_charge_max" type="text"></div>-->
+                    </fieldset>
+                    <fieldset style="width: 80vh;">
+                        <legend style="text-align: left; font-size: 2.5vh;">Дата и время</legend>
+                        <div class="new_sub">Дата и время<input type="datetime-local" id="localdaytime" min="2023-01-01 00:00"></div>
                         <div class="new_sub">Часовой пояс
                             <select name="time_zone" id="time_zone" onchange="">
                                   <option value=0>0 ч</option>
@@ -168,18 +188,6 @@
                                   <option value=11>+11 ч</option>
                             </select>
                         </div>
-<!--                        <div class="new_sub">Глубина разряда АКБ при отсутствии входного напряжения<input id="discharge_akb" type="text" placeholder="xx%"></div>-->
-<!--                        <div class="new_sub">Время задержки срабатывания защиты при превышении тока нагрузки-->
-<!--                            <select name="t_delay" id="t_delay" onchange="">-->
-<!--                                  <option value='0'>1 мс</option>-->
-<!--                                  <option value='10'>10 мс</option>-->
-<!--                                  <option value='50'>50 мс</option>-->
-<!--                                  <option selected value='100'>100 мс</option>-->
-<!--                                  <option value='200'>200 мс</option>-->
-<!--                                  <option value='500'>500 мс</option>-->
-<!--                            </select>-->
-<!--                        </div>-->
-<!--                        <div class="new_sub">Значение максимального тока заряда АКБ<input id="i_charge_max" type="text"></div>-->
                     </fieldset>
                 </fieldset>
             </div>

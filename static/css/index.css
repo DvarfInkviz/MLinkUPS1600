@@ -53,7 +53,10 @@ img:hover {cursor: pointer;}
     padding: 0;
     margin: 1.38vh 1.38vh 0 0;
     border: 0.13vh solid #999;
-    display:inline-block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3vh;
 }
 
 .rele_out_up {

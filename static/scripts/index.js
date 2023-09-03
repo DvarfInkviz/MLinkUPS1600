@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if(response.ok) {
             response.json()
             .then(function(response) {
-                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version + '.'+response.iakb1_0;
+                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version;
 //                show_fieldset(0);
 //                show_fieldset(1);
 //                if (response.priority == 1) {
@@ -174,6 +174,8 @@ function request_status() {
                             break;
                     }
                     document.getElementById('led_status').style.background = '#3f3';
+                    if (response.t_charge_mode == '0') {document.getElementById('t_charge_mode').textContent = "0:00:00.0"}
+                    else {document.getElementById('t_charge_mode').textContent = response.t_charge_mode;}
                     document.getElementById('err_sts').textContent = s_status;
                     document.getElementById('iakb1').textContent = response.iakb1+' A';
                     document.getElementById('uakb1').textContent = response.uakb1+' B';
@@ -322,6 +324,7 @@ function show_fieldset(number) {
                                 document.getElementById('ip_addr').value = response.ip_addr;
                                 document.getElementById('ip_mask').value = response.ip_mask;
                                 document.getElementById('ip_gate').value = response.ip_gate;
+                                document.getElementById('localdaytime').value = response.datetime;
                             }
                         })
                     }

@@ -155,9 +155,9 @@ def get_stm_status(values):
     _first = True
     while True:
         # TODO try-exept for read data
-        in_buf = list(s.read(size=59))
+        in_buf = list(s.read(size=50))
         _u_akb4 = 0
-        if len(in_buf) == 59:
+        if len(in_buf) == 50:
             to_status_log(str(in_buf))
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
             values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{values["err"]:5}'
@@ -240,6 +240,8 @@ def get_stm_status(values):
                     _m = 0
             if values['iload'] < 0.5:
                 values['iload'] = 0
+            if values['state'] == 0 and values['status'] == 196 and values['iakb1'] < 0:
+                values['iakb1'] = 0
             values['uload'] = values['uakb1'] + values['uakb2'] + values['uakb3'] + values['uakb4']
             if values['uakb4'] < 0:
                 values['uakb4'] = 0
@@ -266,22 +268,54 @@ def get_stm_status(values):
                 values['discharge_abc'] = u_akb_dict[0][values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[0][30]
                 values['u_akb_max'] = u_akb_dict[0][100]
+            # to_status_log(format(int(float(values['discharge_abc']) * 10), '02x') + ' ' +
+            #                       format(int(float(values['discharge_akb']) * 10), '02x') + ' ' +
+            #                       format(int(float(values['i_load_max'])), '02x') + ' ' +
+            #                       format(int(float(values['u_akb_max']) * 10), '02x') + ' ' +
+            #                       format(int(float(values['u_abc_max'])), '02x') + ' ' +
+            #                       format(int(float(values['i_charge_max'])), '02x') + ' ' +
+            #                       format(int(float(values['k_u_akb']) * 1000), '04x') + ' ' +
+            #                       format(int(float(values['k_i_akb']) * 10), '04x') + ' ' +
+            #                       format(int(float(values['t_delay']) / 10), '02x') + ' ' +
+            #                       format(int(float(values['temp2'])), '02x') + ' ' +
+            #                       format(int(float(values['max_temp_air'])), '02x') + ' ' +
+            #                       format(int(abs(values['iakb1']*10)), '02x') + ' ' +
+            #                       format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') + ' ' +
+            #                       format(int(abs(values['uload']*10)), '04x'))
+            # to_status_log(msg='\n')
             # to_log(msg=f"d_u={(values['u_akb_max']*4 - _u_akb4):.1f}")
-        s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
-                                  format(int(float(values['discharge_akb']) * 10), '02x') +
-                                  format(int(float(values['i_load_max'])), '02x') +
-                                  format(int(float(values['u_akb_max']) * 10), '02x') +
-                                  format(int(float(values['u_abc_max'])), '02x') +
-                                  format(int(float(values['i_charge_max'])), '02x') +
-                                  format(int(float(values['k_u_akb']) * 1000), '04x') +
-                                  format(int(float(values['k_i_akb']) * 10), '04x') +
-                                  format(int(float(values['t_delay']) / 10), '02x') +
-                                  format(int(float(values['temp2'])), '02x') +
-                                  format(int(float(values['max_temp_air'])), '02x') +
-                                  format(int(abs(values['iakb1']*10)), '02x') +
-                                  format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
-                                  format(int(abs(values['uload']*10)), '04x')
-                                  )
+        if int(abs((values['u_akb_max']*4 - _u_akb4)*10)) > 255:
+            s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
+                                      format(int(float(values['discharge_akb']) * 10), '02x') +
+                                      format(int(float(values['i_load_max'])), '02x') +
+                                      format(int(float(values['u_akb_max']) * 10), '02x') +
+                                      format(int(float(values['u_abc_max'])), '02x') +
+                                      format(int(float(values['i_charge_max'])), '02x') +
+                                      format(int(float(values['k_u_akb']) * 1000), '04x') +
+                                      format(int(float(values['k_i_akb']) * 10), '04x') +
+                                      format(int(float(values['t_delay']) / 10), '02x') +
+                                      format(int(float(values['temp2'])), '02x') +
+                                      format(int(float(values['max_temp_air'])), '02x') +
+                                      format(int(abs(values['iakb1']*10)), '02x') +
+                                      format(int(255), '02x') +
+                                      format(int(abs(values['uload']*10)), '04x')
+                                      )
+        else:
+            s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
+                                      format(int(float(values['discharge_akb']) * 10), '02x') +
+                                      format(int(float(values['i_load_max'])), '02x') +
+                                      format(int(float(values['u_akb_max']) * 10), '02x') +
+                                      format(int(float(values['u_abc_max'])), '02x') +
+                                      format(int(float(values['i_charge_max'])), '02x') +
+                                      format(int(float(values['k_u_akb']) * 1000), '04x') +
+                                      format(int(float(values['k_i_akb']) * 10), '04x') +
+                                      format(int(float(values['t_delay']) / 10), '02x') +
+                                      format(int(float(values['temp2'])), '02x') +
+                                      format(int(float(values['max_temp_air'])), '02x') +
+                                      format(int(abs(values['iakb1']*10)), '02x') +
+                                      format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
+                                      format(int(abs(values['uload']*10)), '04x')
+                                      )
         to_log(str(list(s_out)))
         to_log(f"U_akb_max={in_buf[20]}; "
                f"Uakb4={(in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
@@ -481,7 +515,7 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-IAKB1_0 = 1480
+IAKB1_0 = 1487
 scheduler = BackgroundScheduler()
 scheduler.start()
 temp_time = 1
@@ -523,8 +557,8 @@ status_values = {'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'ua
                  'i_load_max': int(ups_set[2]), 't_charge_max': ups_set[3], 'discharge_abc': ups_set[4],
                  'discharge_akb': int(ups_set[5]), 't_delay': int(ups_set[6]), 'i_charge_max': int(ups_set[7]),
                  'u_abc_max': int(ups_set[8]), 'state': -1, 'err': 0, 'status': 0,
-                 't_charge_mode': 0, 'start_charge': 0,
-                 'u_load_max': 0, 'u_bv': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 13.2, 'menu': 0, 'submenu': 0,
+                 't_charge_mode': 0, 'start_charge': datetime.now(),
+                 'u_load_max': 0, 'u_bv': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 23.2, 'menu': 0, 'submenu': 0,
                  'edit': False, 'rele_in': '0000', 'rele_out': '0000',
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'sub_cnt0': 6,
                  'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:    0', 'sub_cnt1': 0,
@@ -926,6 +960,8 @@ def system():
 # sudo /bin/sed -i 's/address.*/address 192.168.8.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.8.1/' /etc/network/interfaces
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.8.52/' /etc/apache2/sites-available/web-ups1600.conf
 # sudo /bin/sed -i 's/ServerName.*/ServerName 192.168.1.52/' /etc/apache2/sites-available/web-ups1600.conf
+# sudo /bin/sed -i 's/nameserver.*/nameserver 192.168.8.1/' /etc/resolv.conf
 # sudo service networking restart
 # MYIPV4=$(ip addr show end0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
 # cat /etc/armbianmonitor/datasources/soctemp
+# sudo date -s "$(curl -s --head http://google.com | grep ^Date: | sed 's/Date: //g')"

@@ -173,9 +173,9 @@ function request_status() {
                             }
                             break;
                     }
-                    document.getElementById('led_status').style.background = '#3f3';
-                    if (response.t_charge_mode == '0') {document.getElementById('t_charge_mode').textContent = "0:00:00.0"}
-                    else {document.getElementById('t_charge_mode').textContent = response.t_charge_mode;}
+//                    document.getElementById('led_status').style.background = '#3f3';
+//                    if (response.t_charge_mode == '0') {document.getElementById('t_charge_mode').textContent = "0:00:00.0"}
+//                    else {document.getElementById('t_charge_mode').textContent = response.t_charge_mode;}
                     document.getElementById('err_sts').textContent = s_status;
                     document.getElementById('iakb1').textContent = response.iakb1+' A';
                     document.getElementById('uakb1').textContent = response.uakb1+' B';
@@ -249,9 +249,9 @@ function request_status() {
                         document.getElementById('bv3_status').style.background = '#999';
                     }
                 }
-                else {
-                    document.getElementById('led_status').style.background = '#f33';
-                }
+//                else {
+//                    document.getElementById('led_status').style.background = '#f33';
+//                }
             });
         }
         else {

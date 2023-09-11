@@ -37,23 +37,23 @@
                             <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="pcs_0">
                                 <legend style="text-align: left; font-size: 2vh;">БВ 1 - Фаза А</legend>
                                 <fieldset class="led_status" id="bv1_status"></fieldset>
-                                <div class="current" id="ua">0 B</div>
-                                <div class="current" id="tinv1">0 &deg;С</div>
-                                <div class="current" id="iinv1">0 A</div>
+                                <div class="current_pcs" id="ua">0 B</div>
+                                <div class="current_pcs" id="tinv1">0 &deg;С</div>
+                                <div class="current_pcs" id="iinv1">0 A</div>
                             </fieldset>
                             <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="pcs_1">
                                 <legend style="text-align: left; font-size: 2vh;">БВ 2 - Фаза В</legend>
                                 <fieldset class="led_status" id="bv2_status"></fieldset>
-                                <div class="current" id="ub">0 B</div>
-                                <div class="current" id="tinv2">0 &deg;С</div>
-                                <div class="current" id="iinv2">0 A</div>
+                                <div class="current_pcs" id="ub">0 B</div>
+                                <div class="current_pcs" id="tinv2">0 &deg;С</div>
+                                <div class="current_pcs" id="iinv2">0 A</div>
                             </fieldset>
                             <fieldset class="pcs-fieldset" style="flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="pcs_2">
                                 <legend style="text-align: left; font-size: 2vh;">БВ 3 - Фаза С</legend>
                                 <fieldset class="led_status" id="bv3_status"></fieldset>
-                                <div class="current" id="uc">0 B</div>
-                                <div class="current" id="tinv3">0 &deg;С</div>
-                                <div class="current" id="iinv3">0 A</div>
+                                <div class="current_pcs" id="uc">0 B</div>
+                                <div class="current_pcs" id="tinv3">0 &deg;С</div>
+                                <div class="current_pcs" id="iinv3">0 A</div>
                             </fieldset>
                         </div>
                         <div class="pcs">
@@ -128,10 +128,10 @@
                             <fieldset class="led_status" id="dry3_out">3</fieldset>
                             <fieldset class="led_status" id="dry4_out">4</fieldset>
                         </fieldset>
-                        <fieldset class="dry_out-fieldset">
-                            <legend style="text-align: left; font-size: 2vh;">Длительность последнего заряда АКБ</legend>
-                            <div class="current" id="t_charge_mode" style="padding: 2vh;">0:00:00.0</div>
-                        </fieldset>
+<!--                        <fieldset class="dry_out-fieldset">-->
+<!--                            <legend style="text-align: left; font-size: 2vh;">Длительность последнего заряда АКБ</legend>-->
+<!--                            <div class="current" id="t_charge_mode" style="padding: 2vh;">0:00:00.0</div>-->
+<!--                        </fieldset>-->
                     </div>
                 </fieldset>
                 <fieldset class="base-fieldset" style="visibility: hidden;" id="fs_1">
@@ -194,7 +194,7 @@
         </div>
         <div class="footer">
             <p id="version">Микролинк-связь ООО &copy; &reg;, 2023</p>
-            <fieldset class="ping_status" id="led_status" style="font-size: 2vh;"></fieldset>
+<!--            <fieldset class="ping_status" id="led_status" style="font-size: 2vh;"></fieldset>-->
 <!--            <a href=logout><button class="btn_exit">Выход</button></a>-->
             <div id="current-date" style="padding: 0;"></div>
         </div>

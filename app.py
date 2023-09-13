@@ -162,9 +162,9 @@ def get_stm_status(values):
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
             values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{values["err"]:5}'
             values['iakb1'] = (in_buf[4] * 256 + in_buf[5] - IAKB1_0) / values['k_i_akb']
-            values['uakb1'] = (in_buf[7] * 256 + in_buf[8]) * 3.3 / 4096 * 20 * 1.278
-            values['uakb2'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * 1.208 - values['uakb1']
-            values['uakb3'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * 1.189 - values['uakb2'] - \
+            values['uakb1'] = (in_buf[7] * 256 + in_buf[8]) * 3.3 / 4096 * 20 * K_U1
+            values['uakb2'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * K_U2 - values['uakb1']
+            values['uakb3'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * K_U3 - values['uakb2'] - \
                               values['uakb1']
             if values['uakb1'] == values['uakb2'] == values['uakb3'] == 0:
                 values['uakb4'] = 0
@@ -245,16 +245,6 @@ def get_stm_status(values):
             values['uload'] = values['uakb1'] + values['uakb2'] + values['uakb3'] + values['uakb4']
             if values['uakb4'] < 0:
                 values['uakb4'] = 0
-            stm_out = f"Код ошибки: E0_{format(in_buf[1], '02x').upper()}, статус код: {hex(in_buf[2])[2:].upper()}, " \
-                      f"Iakb1 = {values['iakb1']:.2f}, " \
-                      f"Uakb1 = {values['uakb1']:.2f}, " \
-                      f"Uakb2 = {values['uakb2']:.2f}, " \
-                      f"Uakb3 = {values['uakb3']:.2f}, " \
-                      f"Uakb4 = {values['uakb4']:.2f}, " \
-                      f"I1 = {values['iinv1']:.2f}, UC = {values['uc']}, " \
-                      f"I2 = {values['iinv2']:.2f}, UB = {values['ub']}, " \
-                      f"I3 = {values['iinv3']:.2f}, UA = {values['ua']}"
-            # to_human_log(msg=f"STM => {stm_out}")
             values['menu_2_0'] = f'I1={values["iinv1"]} I2={values["iinv2"]};I3={values["iinv3"]}'
             values['menu_2_1'] = f'UA={values["ua"]} UB={values["ub"]};UC={values["uc"]}'
             values['menu_3_0'] = f'U1={values["uakb1"]:.1f} U2={values["uakb2"]:.1f};U3={values["uakb3"]:.1f} ' \
@@ -268,22 +258,6 @@ def get_stm_status(values):
                 values['discharge_abc'] = u_akb_dict[0][values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[0][30]
                 values['u_akb_max'] = u_akb_dict[0][100]
-            # to_status_log(format(int(float(values['discharge_abc']) * 10), '02x') + ' ' +
-            #                       format(int(float(values['discharge_akb']) * 10), '02x') + ' ' +
-            #                       format(int(float(values['i_load_max'])), '02x') + ' ' +
-            #                       format(int(float(values['u_akb_max']) * 10), '02x') + ' ' +
-            #                       format(int(float(values['u_abc_max'])), '02x') + ' ' +
-            #                       format(int(float(values['i_charge_max'])), '02x') + ' ' +
-            #                       format(int(float(values['k_u_akb']) * 1000), '04x') + ' ' +
-            #                       format(int(float(values['k_i_akb']) * 10), '04x') + ' ' +
-            #                       format(int(float(values['t_delay']) / 10), '02x') + ' ' +
-            #                       format(int(float(values['temp2'])), '02x') + ' ' +
-            #                       format(int(float(values['max_temp_air'])), '02x') + ' ' +
-            #                       format(int(abs(values['iakb1']*10)), '02x') + ' ' +
-            #                       format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') + ' ' +
-            #                       format(int(abs(values['uload']*10)), '04x'))
-            # to_status_log(msg='\n')
-            # to_log(msg=f"d_u={(values['u_akb_max']*4 - _u_akb4):.1f}")
         if int(abs((values['u_akb_max']*4 - _u_akb4)*10)) > 255:
             s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
                                       format(int(float(values['discharge_akb']) * 10), '02x') +
@@ -298,7 +272,8 @@ def get_stm_status(values):
                                       format(int(float(values['max_temp_air'])), '02x') +
                                       format(int(abs(values['iakb1']*10)), '02x') +
                                       format(int(255), '02x') +
-                                      format(int(abs(values['uload']*10)), '04x')
+                                      format(int(abs(values['uload']*10)), '04x') +
+                                      format(int(IAKB1_0), '04x')
                                       )
         else:
             s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
@@ -314,7 +289,8 @@ def get_stm_status(values):
                                       format(int(float(values['max_temp_air'])), '02x') +
                                       format(int(abs(values['iakb1']*10)), '02x') +
                                       format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
-                                      format(int(abs(values['uload']*10)), '04x')
+                                      format(int(abs(values['uload']*10)), '04x') +
+                                      format(int(IAKB1_0), '04x')
                                       )
         to_log(str(list(s_out)))
         to_log(f"U_akb_max={in_buf[20]}; "
@@ -339,8 +315,6 @@ def menu(values):
     while True:
         clk_state = clk.value
         dt_state = dt.value
-        # if (clk_state != clk_last_state) or (dt_state != dt_last_state):
-        #     to_status_log(msg=f'clk: {clk_last_state} -> {clk_state}; dt: {dt_last_state} -> {dt_state}')
         if clk_last_state and dt_last_state and clk_state and not dt_state:
             counter -= 1
         elif clk_last_state and not dt_last_state and not clk_state and not dt_state:
@@ -385,8 +359,6 @@ def menu(values):
                 with open(f"/home/microlink/up_cur", 'r') as _file:
                     up_time += int(_file.readline().split(sep='.')[0]) / 3600
                     values['menu_0_6'] = f'Operating up;time {up_time:10.1f}h'
-            # to_status_log(msg=f'menu_{values["menu"]}_{values["submenu"]}')
-            # to_status_log(msg=values[f'menu_{values["menu"]}_{values["submenu"]}'])
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[0], LCD_LINE_1)
             lcd_string(values[f'menu_{values["menu"]}_{values["submenu"]}'].split(sep=';')[1], LCD_LINE_2)
             if values['edit']:
@@ -430,8 +402,6 @@ def menu(values):
                 lcd_byte(0x0F, LCD_CMD)  # 001111 мигающий курсор
             to_status_log(msg=f'Left: {values["menu"]} - {values["submenu"]} - {values["edit"]}')
             counter0 = counter
-        # else:
-        #     to_status_log(msg=f'Rotate: {counter0 - counter}')
         time.sleep(0.005)
 
 
@@ -515,7 +485,12 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-IAKB1_0 = 1487
+K_U1 = 1.278
+K_U2 = 1.208
+K_U3 = 1.189
+K_U4 = 1.016
+K_I1 = 13.2
+IAKB1_0 = 1480
 scheduler = BackgroundScheduler()
 scheduler.start()
 temp_time = 1
@@ -538,8 +513,6 @@ conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
 u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
               40: {30: 13.2, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
-# u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
-#               40: {30: 12, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
 err_dict = {4: 'Критическая ошибка - датчик тока вышел из строя!',
             8: 'Ошибка - напряжение на фазах вне диапазона!',
             16: 'Критическая ошибка - напряжение на АКБ вне диапазона!',
@@ -558,7 +531,7 @@ status_values = {'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'ua
                  'discharge_akb': int(ups_set[5]), 't_delay': int(ups_set[6]), 'i_charge_max': int(ups_set[7]),
                  'u_abc_max': int(ups_set[8]), 'state': -1, 'err': 0, 'status': 0,
                  't_charge_mode': 0, 'start_charge': datetime.now(),
-                 'u_load_max': 0, 'u_bv': 0, 'i_max_stm': 0, 'k_u_akb': 1.016, 'k_i_akb': 23.2, 'menu': 0, 'submenu': 0,
+                 'u_load_max': 0, 'u_bv': 0, 'i_max_stm': 0, 'k_u_akb': K_U4, 'k_i_akb': K_I1, 'menu': 0, 'submenu': 0,
                  'edit': False, 'rele_in': '0000', 'rele_out': '0000',
                  'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'sub_cnt0': 6,
                  'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:    0', 'sub_cnt1': 0,
@@ -677,91 +650,12 @@ else:
                       replace_existing=True)
 
 
-@app.route("/login/", methods=("GET", "POST"), strict_slashes=False)
-def login():
-    if request.method == 'POST':
-        try:
-            json_data = request.get_json()
-            to_log(f'=> {json_data}')
-            if json_data['action'] == 'submit':
-                conn = get_db_connection()
-                user = json_data['login']
-                passwd = conn.execute('SELECT password FROM users WHERE login =?', (user,)).fetchone()
-                conn.close()
-                to_log(f'User <{user}> is trying to login')
-                if passwd:
-                    session['ip_address'] = request.remote_addr
-                    session['login'] = user
-                    if user == 'sadmin':
-                        to_log(f'User <{user}> login into system menu!')
-                        return {
-                            'connection': 'on',
-                            'pwd': str(passwd[0]),
-                            'url': 'system',
-                        }
-                    else:
-                        to_log(f'User <{user}> login into main menu! hash={str(passwd[0])}')
-                        return {
-                            'connection': 'on',
-                            'pwd': str(passwd[0]),
-                            'url': 'index',
-                        }
-                else:
-                    to_log(f'NOUSER <{user}> in DB!')
-                    return redirect(url_for('login'))
-            if json_data['action'] == 'submit_ok':
-                conn = get_db_connection()
-                user = session['login']
-                session['priority'] = conn.execute('SELECT priority FROM users WHERE login =?', (user,)).fetchone()[0]
-                to_log(f'Password for <{user}> is valid')
-                conn.execute('UPDATE users SET logining = ?, log_in = 1, ip = ? WHERE login = ?',
-                             (datetime.now().strftime("%d-%m-%Y %H:%M:%S"), request.remote_addr, user,))
-                conn.commit()
-                conn.close()
-                return {
-                    'connection': 'on',
-                }
-        except Exception as e:
-            flash(str(e), "danger")
-
-    return render_template("login.html")
-
-
-@app.route("/logout")
-def logout():
-    if 'login' in session:
-        conn = get_db_connection()
-        _login = session.get('login', None)
-        conn.execute('UPDATE users SET log_in = 0 WHERE login = ?',
-                     (_login,))
-        conn.commit()
-        session.clear()
-        to_log(f'User <{_login}> logout!')
-    return redirect(url_for('login'))
-
-
 @app.route("/", methods=("GET", "POST"), strict_slashes=False)
 @app.route("/index", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
         json_data = request.get_json()
-        # to_log(f'=> {json_data}')
         session['ip_address'] = request.remote_addr
-        # if json_data['action'] == 'validate':
-        #     conn = get_db_connection()
-        #     ip_client = conn.execute('SELECT ip FROM users WHERE login =?', (session['login'],)).fetchone()
-        #     _login = conn.execute('SELECT log_in FROM users WHERE login =?', (session['login'],)).fetchone()
-        #     conn.close()
-        #     # logging.info(f'### /index-> {ip_client[0]}({_login[0]}) <-> {request.remote_addr}')
-        #     if (ip_client[0] != request.remote_addr) and _login[0]:
-        #         return {
-        #             'status': 'logout',
-        #         }
-        #     else:
-        #         return {
-        #             'status': 'ok',
-        #             'browser': request.user_agent.string,
-        #         }
         if json_data['action'] == 'start':
             return {
                 'connection': 'on',
@@ -789,14 +683,6 @@ def index():
                 'dry3_out': int(status_values['rele_out'][2]),
                 'dry4_out': int(status_values['rele_out'][3]),
                 'u_load_max': status_values['u_load_max'],
-                # 'i_load_max': status_values['i_load_max'],
-                # 't_charge_max': status_values['t_charge_max'],
-                # 'discharge_abc': status_values['discharge_abc'],
-                # 'discharge_akb': status_values['discharge_akb'],
-                # 't_delay': status_values['t_delay'],
-                # 'q_akb': status_values['q_akb'],
-                # 'i_charge_max': status_values['i_charge_max'],
-                # 'u_abc_max': status_values['u_abc_max'],
                 'time_zone': 3,
                 'iakb1': f'{status_values["iakb1"]:.2f}',
                 'uakb1': f'{status_values["uakb1"]:.1f}',
@@ -862,98 +748,6 @@ def index():
                 cur_f.writelines([f"{status_values['ip_addr']}\n", f"{status_values['ip_mask']}\n",
                                   f"{status_values['ip_gate']}\n"])
     return render_template("index.html")
-    # if 'login' in session:
-    #     _login = session['login']
-    # else:
-    #     return redirect(url_for('login'))
-
-
-@app.route("/system", methods=["GET", "POST"])
-# @login_required
-def system():
-    if 'login' in session:
-        if request.method == "POST":
-            json_data = request.get_json()
-            to_log(f'=> {json_data}')
-            db = []
-            if json_data['action'] == 'validate':
-                conn = get_db_connection()
-                ip_client = conn.execute('SELECT ip FROM users WHERE login =?', (session['login'],)).fetchone()
-                conn.close()
-                if ip_client[0] != request.remote_addr:
-                    return {
-                        'status': 'logout',
-                    }
-                else:
-                    return {
-                        'status': 'ok',
-                        'browser': request.user_agent.string,
-                    }
-            if json_data['action'] == 'delete_user':
-                if json_data['id'] > 2:
-                    conn = get_db_connection()
-                    conn.execute('DELETE FROM users WHERE id = ?',
-                                 (json_data['id'],))
-                    conn.commit()
-                    conn.close()
-                    return {
-                        'status': 'delete ok',
-                    }
-                else:
-                    return {
-                        'status': 'permission denied',
-                    }
-            if json_data['action'] == 'update_pwd':
-                conn = get_db_connection()
-                conn.execute('UPDATE users SET password = ? WHERE id = ?',
-                             (json_data['password'], json_data['id'],))
-                conn.commit()
-                conn.close()
-                if json_data['id'] == 1:
-                    return {
-                        'status': 'logout',
-                    }
-                else:
-                    return {
-                        'status': 'ok',
-                    }
-            if json_data['action'] == 'update_user':
-                conn = get_db_connection()
-                conn.execute('UPDATE users SET login = ?, fullname = ?, job_title = ?, priority = ? WHERE id = ?',
-                             (json_data['login'], json_data['fullname'], json_data['job'], json_data['priority'],
-                              json_data['id'][2:],))
-                conn.commit()
-                conn.close()
-                return {
-                    'status': 'reload',
-                }
-            if json_data['action'] == 'new_user':
-                conn = get_db_connection()
-                conn.execute("INSERT INTO users (created, login, password, fullname, job_title, priority) "
-                             "VALUES (?,?,?,?,?,?)",
-                             (datetime.now().strftime("%d-%m-%Y %H:%M:%S"), json_data['login'],
-                              json_data['password'], json_data['fullname'],
-                              json_data['job'], json_data['priority'])
-                             )
-                conn.commit()
-                conn.close()
-                return {
-                    'status': 'reload',
-                }
-            if json_data['action'] == 'start':
-                conn = get_db_connection()
-                users = conn.execute('SELECT * FROM users').fetchall()
-                for user in users:
-                    db.append([user[5], user[3], user[6], user[1], user[2], user[11], user[7], user[10], user[0], ])
-                conn.close()
-                return {
-                    'connection': 'on',
-                    'users': db,
-                    'ip_client': request.remote_addr,
-                }
-        return render_template("system.html")
-    else:
-        return redirect(url_for('login'))
 
 
 # sudo /bin/sed -i 's/address.*/address 192.168.1.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.1.111/' /etc/network/interfaces

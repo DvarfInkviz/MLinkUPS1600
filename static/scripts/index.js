@@ -26,15 +26,6 @@ document.addEventListener('DOMContentLoaded', function () {
             response.json()
             .then(function(response) {
                 document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version;
-//                show_fieldset(0);
-//                show_fieldset(1);
-//                if (response.priority == 1) {
-//                    var nodes = document.getElementById("main-base").getElementsByTagName('*');
-//                    for(var i = 0; i < nodes.length; i++){
-//                         nodes[i].disabled = true;
-//                    }
-//                    document.getElementById('main-base').disabled = true;
-//                }
             })
         }
     })
@@ -66,38 +57,6 @@ function setPageTime() {
         currentDateObj.innerHTML = s;
     }
 }
-// ----- //
-// VALIDATE //
-//document.addEventListener('DOMContentLoaded', () => {
-//                  setInterval(request_validate, 9999);
-//              });
-//              function request_validate() {
-//                    fetch('/index', {
-//                        headers : {
-//                            'Content-Type' : 'application/json'
-//                        },
-//                        method : 'POST',
-//                        body : JSON.stringify( {
-//                            'action' : 'validate',
-//                        })
-//                    })
-//                    .then(function (response){
-//                        if(response.ok) {
-//                            response.json()
-//                            .then(function(response) {
-//                                if (response.status == 'logout') {
-//                                    window.location = 'logout'
-//                                }
-//                            });
-//                        }
-//                        else {
-//                            throw Error('Something went wrong');
-//                        }
-//                    })
-//                    .catch(function(error) {
-//                        console.log(error);
-//                    });
-//                }
 // ----- //
 
 // UPDATE STATUS //
@@ -249,9 +208,6 @@ function request_status() {
                         document.getElementById('bv3_status').style.background = '#999';
                     }
                 }
-//                else {
-//                    document.getElementById('led_status').style.background = '#f33';
-//                }
             });
         }
         else {
@@ -389,3 +345,92 @@ const journal = {
     }
 };
 // ----- //
+// Canvas //
+var MAX_DATA_SET_LENGTH = 120;
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => { setInterval(reLoad, 1000); }, 1000);
+              });
+function reLoad() {
+//  adddata(44, 56);
+    var u1 = parseFloat(document.getElementById('u_bv').textContent);
+    var u2 = parseFloat(document.getElementById('uload').textContent);
+  adddata(u1, u2);
+}
+
+var canvas = document.getElementById('myChart');
+var data = {
+  datasets: [{
+      label: 'Uупр.',
+      borderColor: 'rgb(237, 18, 237)',
+      fill: false,
+      borderWidth: 1
+    },
+    {
+      label: 'Uнаг.',
+      borderColor: 'rgb(0, 115, 255)',
+      fill: false,
+      borderWidth: 1
+    }
+  ]
+}
+var options = {
+  scales: {
+    yAxes: [{
+      type: 'linear',
+    }],
+
+    xAxes: [{
+      type: 'time',
+      ticks: {
+        maxTicksLimit: 5,
+      },
+      time: {
+        unit: 'second',
+        displayFormats: {
+          'second': 'HH:mm:ss',
+        },
+        tooltipFormat: 'HH:mm:ss',
+      }
+    }]
+  },
+  showLines: true
+};
+var myChart = new Chart.Line(canvas, {
+  data: data,
+  options: options
+});
+
+function adddata(download = NaN, upload = NaN, label = moment()) {
+  var datasets = myChart.data.datasets;
+  var labels = myChart.data.labels;
+  var downloadDataSet = datasets[0].data;
+  var uploadDataSet = datasets[1].data;
+
+  var downloadDataLength = downloadDataSet.length;
+  var uploadDataLength = uploadDataSet.length;
+
+  // if upload/download's data set has more than MAX_DATA_SET_LENGTH entries,
+  // remove the first one entry and push on a new data entry
+  var didRemoveData = false;
+  if (downloadDataLength > MAX_DATA_SET_LENGTH) {
+    downloadDataSet.shift();
+    didRemoveData = true;
+  }
+
+  if (uploadDataLength > MAX_DATA_SET_LENGTH) {
+    uploadDataSet.shift();
+    didRemoveData = true;
+  }
+
+  // if either download or upload data was removed, we also need to remove
+  // the first label to keep the data from squeezing in.
+  if (didRemoveData) {
+    labels.shift();
+  }
+
+  labels.push(label);
+  downloadDataSet.push(download);
+  uploadDataSet.push(upload);
+  myChart.update();
+}
+//-----------//

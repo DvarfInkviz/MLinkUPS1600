@@ -143,8 +143,28 @@ def get_state_status(old, cur, err, st):
     return cur
 
 
+def get_inv_error(err, _id):
+    _error = f'{err:08b}'[::-1]
+    if _error[0] == '1':
+        to_human_log(msg=f'Общий отказа {_id} БВ')
+    if _error[1] == '1':
+        to_human_log(msg=f'Отказ вентилятора {_id} БВ')
+    if _error[2] == '1':
+        to_human_log(msg=f'Перенапряжение на выходе {_id} БВ DC')
+    if _error[3] == '1':
+        to_human_log(msg=f'Недонапряжение на выходе {_id} БВ DC')
+    if _error[4] == '1':
+        to_human_log(msg=f'Перегрев {_id} БВ')
+    if _error[5] == '1':
+        to_human_log(msg=f'Недонапряжение на входе {_id} БВ АС')
+    if _error[6] == '1':
+        to_human_log(msg=f'Перегрузка {_id} БВ')
+    if _error[7] == '1':
+        to_human_log(msg=f'Перенапряжение на входе {_id} БВ АС')
+    return err
+
+
 def get_stm_status(values):
-    # TODO try-exept for open serial port
     s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
                       xonxoff=False, rtscts=False, dsrdtr=False)
     s.reset_input_buffer()  # flush input buffer
@@ -154,11 +174,12 @@ def get_stm_status(values):
     _m_list = [{}, {}, {}, {}, {}, {}]
     _first = True
     while True:
-        # TODO try-exept for read data
-        in_buf = list(s.read(size=50))
+        in_buf = list(s.read(size=51))
         _u_akb4 = 0
-        if len(in_buf) == 50:
+        if len(in_buf) == 51:
             to_status_log(str(in_buf))
+            values['version'] = f'arm.{in_buf[50]//10}.{in_buf[50]%10}'
+            values['menu_0_7'] = f"Version:;{values['version']} {MCU_VERSION}"
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
             values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{values["err"]:5}'
             values['iakb1'] = (in_buf[4] * 256 + in_buf[5] - IAKB1_0) / values['k_i_akb']
@@ -177,17 +198,17 @@ def get_stm_status(values):
             values['iinv1'] = (in_buf[23] * 256 + in_buf[22]) / 10
             values['ua'] = in_buf[25] * 256 + in_buf[24]
             values['tinv1'] = in_buf[26]
-            values['einv1'] = (in_buf[28] * 256 + in_buf[27]) / 10
+            values['einv1'] = get_inv_error(err=in_buf[27], _id=1)
             # 29 - F2
             values['iinv2'] = (in_buf[31] * 256 + in_buf[30]) / 10
             values['ub'] = in_buf[33] * 256 + in_buf[32]
             values['tinv2'] = in_buf[34]
-            values['einv2'] = (in_buf[36] * 256 + in_buf[35]) / 10
+            values['einv2'] = get_inv_error(err=in_buf[35], _id=2)
             # 37 - F3
             values['iinv3'] = (in_buf[39] * 256 + in_buf[38]) / 10
             values['uc'] = in_buf[41] * 256 + in_buf[40]
             values['tinv3'] = in_buf[42]
-            values['einv3'] = (in_buf[44] * 256 + in_buf[43]) / 10
+            values['einv3'] = get_inv_error(err=in_buf[43], _id=3)
             values['iload'] = values['iinv1'] + values['iinv2'] + values['iinv3'] + values['iakb1']
             values['state'] = in_buf[45]
             values['status'] = get_state_status(cur=in_buf[2], old=values['status'], err=values['err'],
@@ -485,12 +506,13 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
+MCU_VERSION = 'mcu.1.6'
 K_U1 = 1.278
 K_U2 = 1.208
 K_U3 = 1.189
 K_U4 = 1.016
-K_I1 = 13.2
-IAKB1_0 = 1480
+K_I1 = 23.2
+IAKB1_0 = 1487
 scheduler = BackgroundScheduler()
 scheduler.start()
 temp_time = 1
@@ -533,15 +555,16 @@ status_values = {'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'ua
                  't_charge_mode': 0, 'start_charge': datetime.now(),
                  'u_load_max': 0, 'u_bv': 0, 'i_max_stm': 0, 'k_u_akb': K_U4, 'k_i_akb': K_I1, 'menu': 0, 'submenu': 0,
                  'edit': False, 'rele_in': '0000', 'rele_out': '0000',
-                 'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'sub_cnt0': 6,
+                 'menu_0_0': f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}', 'sub_cnt0': 7,
                  'menu_0_1': f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:    0', 'sub_cnt1': 0,
                  'menu_0_2': 'Inverter      >>; ', 'sub_cnt2': 1,
                  'menu_0_3': 'Battery       >>; ', 'sub_cnt3': 1,
                  'menu_0_4': 'Settings      >>; ', 'sub_cnt4': 4,
                  'menu_0_5': 'IP address:; ', 'sub_cnt5': 0,
                  'menu_0_6': f'Operating up;time {up_time:10.1f}h', 'discharge_depth': int(ups_set[9]), 'sub_cnt6': 0,
+                 'menu_0_7': f'Version:;', 'sub_cnt7': 0,
                  'max_temp_air': int(ups_set[10]), 'ip_addr': '192.168.1.10', 'ip_mask': '255.255.255.0',
-                 'ip_gate': '192.168.1.1'}
+                 'ip_gate': '192.168.1.1', 'version': '0.0'}
 # u_load_max TEXT DEFAULT '4000',    1
 # i_load_max TEXT DEFAULT '90'       2
 # t_charge_max TEXT DEFAULT '20',    3
@@ -659,7 +682,7 @@ def index():
         if json_data['action'] == 'start':
             return {
                 'connection': 'on',
-                'version': 'arm.0.6, mcu.1.5',
+                'version': f'{status_values["version"]}, {MCU_VERSION}',
             }
         if json_data['action'] == 'status':
             with open(f"/etc/armbianmonitor/datasources/soctemp", 'r') as _file:

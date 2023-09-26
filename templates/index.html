@@ -23,6 +23,7 @@
                 <a href="#information" style="width: 100%;" onclick="return show_fieldset('0')" id="ah_0"><button class="btn_menu" id="btn_0">Состояние</button></a>
                 <a href="#logs" style="width: 100%;" onclick="return show_fieldset('1')" id="ah_1"><button class="btn_menu" id="btn_1">Журнал</button></a>
                 <a href="#settings" style="width: 100%;" onclick="return show_fieldset('2')" id="ah_2"><button class="btn_menu" id="btn_2">Уставки</button></a>
+                <a href="#update" style="visibility: hidden; width: 100%;" onclick="return show_fieldset('3')" id="ah_3"><button class="btn_menu" id="btn_3">Обновление</button></a>
             </div>
             <div class="main-base" id="main-base" style="padding: 0 1.38vh;">
                 <fieldset class="base-fieldset" style="z-index: 100; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_0">
@@ -146,9 +147,9 @@
                     <legend style="text-align: left;">Уставки</legend>
                     <fieldset style="width: 80vh;">
                         <legend style="text-align: left; font-size: 2.5vh;">Сеть</legend>
-                        <div class="new_sub">IP адрес:<input id="ip_addr" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
-                        <div class="new_sub">Маска сети:<input id="ip_mask" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
-                        <div class="new_sub">Шлюз:<input id="ip_gate" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusout="check_input_ip(this)"></div>
+                        <div class="new_sub">IP адрес:<input id="ip_addr" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusin="rem(this)" onfocusout="check_input_ip(this)"></div>
+                        <div class="new_sub">Маска сети:<input id="ip_mask" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusin="rem(this)" onfocusout="check_input_ip(this)"></div>
+                        <div class="new_sub">Шлюз:<input id="ip_gate" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusin="rem(this)" onfocusout="check_input_ip(this)"></div>
 <!--                        <div><img class="pid_key_small" src="{{url_for('static',filename='images/buttons/ip_set.png')}}" alt="Изменить ip" style="width: 5vh; height: 5vh;"></div>-->
 <!--                        onclick="return new_ip.init();"-->
                     </fieldset>
@@ -193,6 +194,11 @@
                             </select>
                         </div>
                     </fieldset>
+                    <button id="btn_reboot" style="visibility: hidden; width: 15%; margin: 1vh; font-size: 2vh; background: #f33;" onclick="return reboot_pc()">Перезагрузить</button>
+                </fieldset>
+                <fieldset class="base-fieldset" style="visibility: hidden; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_3">
+                    <legend style="text-align: left;">Обновление</legend>
+                    <button id="update_arm" onclick="return stm32loader()">Обновить ARM</button>
                 </fieldset>
             </div>
         </div>

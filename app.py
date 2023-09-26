@@ -11,19 +11,29 @@ from flask import Flask, render_template, request, redirect, flash, url_for, ses
 from w1thermsensor import W1ThermSensor
 # import subprocess
 from apscheduler.schedulers.background import BackgroundScheduler
+from stm32loader.main import main
 
 
 def lcd_init():
     # Initialise display
-    lcd_byte(0x30, LCD_CMD)  # 110000 Initialise
-    lcd_byte(0x02, LCD_CMD)  # 000010 Initialise
-    # lcd_byte(0x32, LCD_CMD)  # 110010 Initialise
-    # lcd_byte(0x06, LCD_CMD)  # 000110 Cursor move direction
-    lcd_byte(0x0C, LCD_CMD)  # 001100 Display On,Cursor Off, Blink Off
-    lcd_byte(0x28, LCD_CMD)  # 101000 Data length, number of lines, font size
-    lcd_byte(0x01, LCD_CMD)  # 000001 Clear display
-    lcd_byte(LCD_LINE_1, LCD_CMD)  # 10000000 переход на 1 строку
-    time.sleep(E_DELAY)
+    try:
+        lcd_byte(0x30, LCD_CMD)  # 110000 Initialise
+    except BlockingIOError as _err:
+        to_human_log(msg='Сбой инициализации экрана')
+        to_log(msg=f'Сбой инициализации экрана - {_err}')
+        _e = False
+    else:
+        lcd_byte(0x02, LCD_CMD)  # 000010 Initialise
+        # lcd_byte(0x32, LCD_CMD)  # 110010 Initialise
+        # lcd_byte(0x06, LCD_CMD)  # 000110 Cursor move direction
+        lcd_byte(0x0C, LCD_CMD)  # 001100 Display On,Cursor Off, Blink Off
+        lcd_byte(0x28, LCD_CMD)  # 101000 Data length, number of lines, font size
+        lcd_byte(0x01, LCD_CMD)  # 000001 Clear display
+        lcd_byte(LCD_LINE_1, LCD_CMD)  # 10000000 переход на 1 строку
+        time.sleep(E_DELAY)
+        _e = True
+    finally:
+        return _e
 
 
 def lcd_byte(bits, mode):
@@ -51,11 +61,12 @@ def lcd_toggle_enable(bits):
 
 
 def lcd_string(message, line):
-    # Send string to display
-    message = message.ljust(LCD_WIDTH, " ")
-    lcd_byte(line, LCD_CMD)
-    for i in range(LCD_WIDTH):
-        lcd_byte(ord(message[i]), LCD_CHR)
+    if lcd_error:
+        # Send string to display
+        message = message.ljust(LCD_WIDTH, " ")
+        lcd_byte(line, LCD_CMD)
+        for i in range(LCD_WIDTH):
+            lcd_byte(ord(message[i]), LCD_CHR)
 
 
 def to_human_log(session_val=None, msg=''):
@@ -443,26 +454,26 @@ def press(values):
                     if values['submenu'] == 0:
                         _conn.execute('UPDATE ups_settings SET i_load_max = ? WHERE id =1',
                                       (str(values["i_load_max"]),))
-                        to_human_log(msg=f'Установлено новое значение - Максимальный ток нагрузки – ток отсечки: '
-                                         f'{values["i_load_max"]}A')
+                        to_human_log(msg=f'LCD: Уставку "Максимальный ток нагрузки – ток отсечки" изменили '
+                                         f' на {values["i_load_max"]}A')
                     if values['submenu'] == 1:
                         _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
                                       (str(values["i_charge_max"]),))
-                        to_human_log(msg=f'Установлено новое значение - Емкость АКБ: {values["i_load_max"]*10}Ah')
+                        to_human_log(msg=f'LCD: Уставку "Емкость АКБ" изменили на {values["i_charge_max"]*10}Ah')
                     if values['submenu'] == 2:
                         _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
                                       (str(values["discharge_depth"]),))
-                        to_human_log(msg=f'Установлено новое значение - Глубина разряда АКБ при наличии входного '
-                                         f'напряжения: {values["discharge_depth"]}%')
+                        to_human_log(msg=f'LCD: Уставку "Глубина разряда АКБ при наличии входного напряжения" изменили '
+                                         f'на {values["discharge_depth"]}%')
                     if values['submenu'] == 3:
                         _conn.execute('UPDATE ups_settings SET u_abc_max = ? WHERE id =1', (str(values["u_abc_max"]),))
-                        to_human_log(msg=f'Установлено новое значение - Напряжение на выходе ИБП в случае '
-                                         f'работы без АКБ: {values["u_abc_max"]}B')
+                        to_human_log(msg=f'LCD: Уставку "Напряжение на выходе ИБП в случае работы без АКБ" изменили '
+                                         f'на {values["u_abc_max"]}B')
                     if values['submenu'] == 4:
                         _conn.execute('UPDATE ups_settings SET max_temp_air = ? WHERE id =1',
                                       (str(values["max_temp_air"]),))
-                        to_human_log(msg=f'Установлено новое значение - Максимальная температура в шкафу: '
-                                         f'{values["max_temp_air"]}C')
+                        to_human_log(msg=f'LCD: Уставку "Максимальная температура в шкафу" изменили '
+                                         f'на {values["max_temp_air"]}°С')
                     _conn.commit()
                     _conn.close()
                     lcd_byte(LCD_LINE_1, LCD_CMD)  # переход на 1 строку
@@ -506,7 +517,7 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.6'
+MCU_VERSION = 'mcu.1.7'
 K_U1 = 1.278
 K_U2 = 1.208
 K_U3 = 1.189
@@ -626,7 +637,7 @@ bus = smbus.SMBus(0)
 to_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_status_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_human_log(msg=f'Прибор включили, веб-сервис запущен в {datetime.now()}')
-lcd_init()
+lcd_error = lcd_init()
 lcd_string(status_values['menu_0_0'].split(sep=';')[0], LCD_LINE_1)
 lcd_string(status_values['menu_0_0'].split(sep=';')[1], LCD_LINE_2)
 status_values['w1temp'] = W1ThermSensor.get_available_sensors()
@@ -752,13 +763,50 @@ def index():
                 'datetime': datetime.now().strftime('%Y-%m-%d %H:%M'),
                 'time_zone': 3,
             }
+        if json_data['action'] == 'reboot':
+            time.sleep(5)
+            os.system("sudo /sbin/reboot")
+        if json_data['action'] == 'stm32loader':
+            if scheduler.get_job(job_id='get_stm_status'):
+                scheduler.remove_job(job_id='get_stm_status')
+                # scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
+                #                   seconds=1, id='get_stm_status', replace_existing=True)
+            time.sleep(2)
+            if scheduler.get_job(job_id='get_stm_status') is None:
+                return {
+                    'status': 'get_stm_status stopped!',
+                }
+            main("-p", "/dev/ttyS1", "-e", "-w", "-v", "/home/microlink/gpio_b3.bin")
+        #     https://github.com/florisla/stm32loader/tree/master#electrically
         if json_data['action'] == 'update':
-            status_values[json_data['status_values']] = int(''.join(filter(str.isdigit, json_data['value'])))
-            _conn = get_db_connection()
-            _conn.execute(f"UPDATE ups_settings SET {json_data['status_values']} = ? WHERE id =1",
-                          (str(status_values[json_data['status_values']]),))
-            _conn.commit()
-            _conn.close()
+            if json_data['status_values'] == 'q_akb':
+                status_values["i_charge_max"] = int(json_data['value']/10)
+                to_human_log(msg=f'Web: Уставку "Емкость АКБ" изменили на {status_values["i_charge_max"]}')
+                _conn = get_db_connection()
+                _conn.execute(f"UPDATE ups_settings SET i_charge_max = ? WHERE id =1",
+                              (str(status_values["i_charge_max"]),))
+                _conn.commit()
+                _conn.close()
+            else:
+                status_values[json_data['status_values']] = json_data['value']
+                _conn = get_db_connection()
+                _conn.execute(f"UPDATE ups_settings SET {json_data['status_values']} = ? WHERE id =1",
+                              (str(status_values[json_data['status_values']]),))
+                _conn.commit()
+                _conn.close()
+                if json_data['status_values'] == 'discharge_depth':
+                    to_human_log(msg=f'Web: Уставку "Глубина разряда АКБ при наличии входного напряжения" изменили '
+                                     f'на {status_values[json_data["status_values"]]}%')
+                if json_data['status_values'] == 'i_load_max':
+                    to_human_log(msg=f'Web: Уставку "Максимальный ток нагрузки – ток отсечки" изменили '
+                                     f'на {status_values[json_data["status_values"]]}A')
+                if json_data['status_values'] == 'u_abc_max':
+                    to_human_log(msg=f'Web: Уставку "Напряжение на выходе ИБП в случае работы без АКБ" изменили '
+                                     f'на {status_values[json_data["status_values"]]}B')
+                if json_data['status_values'] == 'max_temp_air':
+                    to_human_log(msg=f'Web: Уставку "Максимальная температура в шкафу" изменили '
+                                     f'на {status_values[json_data["status_values"]]}°С')
+
             status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]:15}A'
             status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"] * 10:14}Ah'
             status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]:15}%'

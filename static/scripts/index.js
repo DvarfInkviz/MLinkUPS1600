@@ -227,7 +227,7 @@ function show_fieldset(number) {
     for(var y = 0; y < nodes.length; y++){
          nodes[y].disabled = false;
     }
-    for (var i = 0; i<3; i++) {
+    for (var i = 0; i<4; i++) {
         if ((document.getElementById('fs_'+i))&&(i != number)) {
             document.getElementById('fs_'+i).style.visibility = 'hidden';
             document.getElementById('fs_'+i).style.zIndex = '0';
@@ -281,6 +281,7 @@ function show_fieldset(number) {
                                 document.getElementById('ip_mask').value = response.ip_mask;
                                 document.getElementById('ip_gate').value = response.ip_gate;
                                 document.getElementById('localdaytime').value = response.datetime;
+                                document.getElementById('btn_reboot').style.visibility = 'hidden';
                             }
                         })
                     }
@@ -288,6 +289,12 @@ function show_fieldset(number) {
             }
         }
     }
+}
+var ip4, gate4, mask4;
+function rem(el) {
+    if (el.id == 'ip_addr') {ip4 = el.value}
+    if (el.id == 'ip_mask') {mask4 = el.value}
+    if (el.id == 'ip_gate') {gate4 = el.value}
 }
 function check_input(el) {
     let text = el.value;
@@ -301,13 +308,27 @@ function check_input(el) {
         body : JSON.stringify( {
             'action' : 'update',
             'status_values': el.id,
-            'value' : text,
+            'value' : parseFloat(text),
         })
     })
 }
-
+function reboot_pc() {
+    fetch('/index', {
+        headers : {
+            'Content-Type' : 'application/json'
+        },
+        method : 'POST',
+        body : JSON.stringify( {
+            'action' : 'reboot',
+        })
+    })
+    show_fieldset(0);
+}
 function check_input_ip(el) {
     let text = el.value;
+    if ((el.id == 'ip_addr')&&(ip4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
+    if ((el.id == 'ip_mask')&&(mask4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
+    if ((el.id == 'ip_gate')&&(gate4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
     fetch('/index', {
         headers : {
             'Content-Type' : 'application/json'
@@ -318,6 +339,25 @@ function check_input_ip(el) {
             'status_values': el.id,
             'value' : text,
         })
+    })
+}
+function stm32loader() {
+    fetch('/index', {
+        headers : {
+            'Content-Type' : 'application/json'
+        },
+        method : 'POST',
+        body : JSON.stringify( {
+            'action' : 'stm32loader',
+        })
+    })
+    .then(function (response){
+        if(response.ok) {
+            response.json()
+            .then(function(response) {
+                console.log(response.status);
+            })
+        }
     })
 }
 // JOURNAL //
@@ -377,6 +417,10 @@ var options = {
   scales: {
     yAxes: [{
       type: 'linear',
+      ticks: {
+        min: 40,
+        suggestedMax: 60
+      }
     }],
 
     xAxes: [{

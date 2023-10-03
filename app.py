@@ -157,34 +157,37 @@ def get_state_status(old, cur, err, st):
 def get_inv_error(err, _id):
     _error = f'{err:08b}'[::-1]
     if _error[0] == '1':
-        to_human_log(msg=f'Общий отказа {_id} БВ')
+        to_human_log(msg=f'Общий отказа {_id}-го БВ')
     if _error[1] == '1':
-        to_human_log(msg=f'Отказ вентилятора {_id} БВ')
+        to_human_log(msg=f'Отказ вентилятора {_id}-го БВ')
     if _error[2] == '1':
-        to_human_log(msg=f'Перенапряжение на выходе {_id} БВ DC')
+        to_human_log(msg=f'Перенапряжение на выходе {_id}-го БВ DC')
     if _error[3] == '1':
-        to_human_log(msg=f'Недонапряжение на выходе {_id} БВ DC')
+        to_human_log(msg=f'Недонапряжение на выходе {_id}-го БВ DC')
     if _error[4] == '1':
-        to_human_log(msg=f'Перегрев {_id} БВ')
+        to_human_log(msg=f'Перегрев {_id}-го БВ')
     if _error[5] == '1':
-        to_human_log(msg=f'Недонапряжение на входе {_id} БВ АС')
+        to_human_log(msg=f'Недонапряжение на входе {_id}-го БВ АС')
     if _error[6] == '1':
-        to_human_log(msg=f'Перегрузка {_id} БВ')
+        to_human_log(msg=f'Перегрузка {_id}-го БВ')
     if _error[7] == '1':
-        to_human_log(msg=f'Перенапряжение на входе {_id} БВ АС')
+        to_human_log(msg=f'Перенапряжение на входе {_id}-го БВ АС')
     return err
 
 
 def get_stm_status(values):
     s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
                       xonxoff=False, rtscts=False, dsrdtr=False)
+    # to_status_log(msg=f"open port {s.name}")
+    if not s.is_open:
+        s.open()
     s.reset_input_buffer()  # flush input buffer
     s.reset_output_buffer()
     cnt_m = 10  # количество значений для усреднения
     _m = 0
     _m_list = [{}, {}, {}, {}, {}, {}]
     _first = True
-    while True:
+    while s.is_open:
         in_buf = list(s.read(size=51))
         _u_akb4 = 0
         if len(in_buf) == 51:
@@ -633,7 +636,15 @@ E_DELAY = 0.0005
 
 # Open I2C interface
 bus = smbus.SMBus(0)
-
+stm_reset = digitalio.DigitalInOut(board.pin.PC3)
+stm_reset.direction = digitalio.Direction.OUTPUT
+stm_reset.value = False
+stm_boot = digitalio.DigitalInOut(board.pin.PG8)
+stm_boot.direction = digitalio.Direction.OUTPUT
+stm_boot.value = False
+stm_reset.value = True
+time.sleep(1)
+stm_reset.value = False
 to_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_status_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_human_log(msg=f'Прибор включили, веб-сервис запущен в {datetime.now()}')
@@ -647,6 +658,7 @@ if len(status_values['w1temp']) == 2:
     status_values['temp1'] = status_values['w1temp'][0].get_temperature()
     status_values['temp2'] = status_values['w1temp'][1].get_temperature()
 if scheduler.get_job(job_id='get_stm_status') is None:
+    to_status_log(msg='Start working with stm')
     scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
                       seconds=1, id='get_stm_status', replace_existing=True)
 time.sleep(1)

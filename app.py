@@ -140,13 +140,19 @@ def update_temp(values):
 
 def get_error_status(cur, old):
     if cur > 0 and not cur == old:
-        to_human_log(msg=err_dict[cur])
+        try:
+            to_human_log(msg=err_dict[cur])
+        except KeyError as _err:
+            to_status_log(msg=f'KeyError: {_err}')
     return cur
 
 
 def get_state_status(old, cur, err, st):
     if err == 0 and not cur == old:
-        to_human_log(msg=status_dict[st][cur])
+        try:
+            to_human_log(msg=status_dict[st][cur])
+        except KeyError as _err:
+            to_status_log(msg=f'KeyError: {_err}')
         if cur == 194:
             status_values['start_charge'] = datetime.now()
         if cur == 196:
@@ -293,46 +299,51 @@ def get_stm_status(values):
                 values['discharge_abc'] = u_akb_dict[0][values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[0][30]
                 values['u_akb_max'] = u_akb_dict[0][100]
-        if int(abs((values['u_akb_max']*4 - _u_akb4)*10)) > 255:
-            s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
-                                      format(int(float(values['discharge_akb']) * 10), '02x') +
-                                      format(int(float(values['i_load_max'])), '02x') +
-                                      format(int(float(values['u_akb_max']) * 10), '02x') +
-                                      format(int(float(values['u_abc_max'])), '02x') +
-                                      format(int(float(values['i_charge_max'])), '02x') +
-                                      format(int(float(values['k_u_akb']) * 1000), '04x') +
-                                      format(int(float(values['k_i_akb']) * 10), '04x') +
-                                      format(int(float(values['t_delay']) / 10), '02x') +
-                                      format(int(float(values['temp2'])), '02x') +
-                                      format(int(float(values['max_temp_air'])), '02x') +
-                                      format(int(abs(values['iakb1']*10)), '02x') +
-                                      format(int(255), '02x') +
-                                      format(int(abs(values['uload']*10)), '04x') +
-                                      format(int(IAKB1_0), '04x')
-                                      )
+        try:
+            if int(abs((values['u_akb_max']*4 - _u_akb4)*10)) > 255:
+                s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
+                                          format(int(float(values['discharge_akb']) * 10), '02x') +
+                                          format(int(float(values['i_load_max'])), '02x') +
+                                          format(int(float(values['u_akb_max']) * 10), '02x') +
+                                          format(int(float(values['u_abc_max'])), '02x') +
+                                          format(int(float(values['i_charge_max'])), '02x') +
+                                          format(int(float(values['k_u_akb']) * 1000), '04x') +
+                                          format(int(float(values['k_i_akb']) * 10), '04x') +
+                                          format(int(float(values['t_delay']) / 10), '02x') +
+                                          format(int(float(values['temp2'])), '02x') +
+                                          format(int(float(values['max_temp_air'])), '02x') +
+                                          format(int(abs(values['iakb1']*10)), '02x') +
+                                          format(int(255), '02x') +
+                                          format(int(abs(values['uload']*10)), '04x') +
+                                          format(int(IAKB1_0), '04x')
+                                          )
+            else:
+                s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
+                                          format(int(float(values['discharge_akb']) * 10), '02x') +
+                                          format(int(float(values['i_load_max'])), '02x') +
+                                          format(int(float(values['u_akb_max']) * 10), '02x') +
+                                          format(int(float(values['u_abc_max'])), '02x') +
+                                          format(int(float(values['i_charge_max'])), '02x') +
+                                          format(int(float(values['k_u_akb']) * 1000), '04x') +
+                                          format(int(float(values['k_i_akb']) * 10), '04x') +
+                                          format(int(float(values['t_delay']) / 10), '02x') +
+                                          format(int(float(values['temp2'])), '02x') +
+                                          format(int(float(values['max_temp_air'])), '02x') +
+                                          format(int(abs(values['iakb1']*10)), '02x') +
+                                          format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
+                                          format(int(abs(values['uload']*10)), '04x') +
+                                          format(int(IAKB1_0), '04x')
+                                          )
+        except ValueError as _err:
+            to_status_log(msg=f'ValueError: {_err}')
         else:
-            s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
-                                      format(int(float(values['discharge_akb']) * 10), '02x') +
-                                      format(int(float(values['i_load_max'])), '02x') +
-                                      format(int(float(values['u_akb_max']) * 10), '02x') +
-                                      format(int(float(values['u_abc_max'])), '02x') +
-                                      format(int(float(values['i_charge_max'])), '02x') +
-                                      format(int(float(values['k_u_akb']) * 1000), '04x') +
-                                      format(int(float(values['k_i_akb']) * 10), '04x') +
-                                      format(int(float(values['t_delay']) / 10), '02x') +
-                                      format(int(float(values['temp2'])), '02x') +
-                                      format(int(float(values['max_temp_air'])), '02x') +
-                                      format(int(abs(values['iakb1']*10)), '02x') +
-                                      format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
-                                      format(int(abs(values['uload']*10)), '04x') +
-                                      format(int(IAKB1_0), '04x')
-                                      )
-        to_log(str(list(s_out)))
-        to_log(f"U_akb_max={in_buf[20]}; "
-               f"Uakb4={(in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
-               f"d_uakb={in_buf[18]/10:.1f}; u_load_abc={(in_buf[46] * 256 + in_buf[47])/80:.1f}; "
-               f"d_iakb={in_buf[19]/10:.1f}; E0_{format(in_buf[1], '02x').upper()}; {hex(in_buf[2])[2:].upper()}")
-        s.write(s_out)
+            to_log(str(list(s_out)))
+            s.write(s_out)
+        finally:
+            to_log(f"U_akb_max={in_buf[20]}; "
+                   f"Uakb4={(in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
+                   f"d_uakb={in_buf[18]/10:.1f}; u_load_abc={(in_buf[46] * 256 + in_buf[47])/80:.1f}; "
+                   f"d_iakb={in_buf[19]/10:.1f}; E0_{format(in_buf[1], '02x').upper()}; {hex(in_buf[2])[2:].upper()}")
     # s.close()
 
 
@@ -700,6 +711,14 @@ else:
 @app.route("/index", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
+        if 'myFile' in request.files:
+            to_status_log(msg='%%%%%%% Get file!')
+            _f_in = request.files['myFile']
+            _f_in.save(os.path.join(f'/var/www/{PROJECT_NAME}/static/files/upload', _f_in.filename))
+            return {
+                'connection': 'on',
+                'file_info': _f_in.filename,
+            }
         json_data = request.get_json()
         session['ip_address'] = request.remote_addr
         if json_data['action'] == 'start':

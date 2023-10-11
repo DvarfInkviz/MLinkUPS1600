@@ -341,6 +341,32 @@ function check_input_ip(el) {
         })
     })
 }
+// ----- /
+const handleImageUpload = event => {
+  let files = event.target.files
+  let formData = new FormData()
+  formData.append('myFile', files[0])
+
+  fetch('/index', {
+    method: 'POST',
+    body: formData
+  })
+    .then(function (response){
+        if(response.ok) {
+            response.json()
+            .then(function(response) {
+                console.log(response.file_info)
+            })
+        }
+    })
+  .catch(error => {
+    console.error(error)
+  })
+}
+
+document.querySelector('#fileUpload').addEventListener('change', event => {
+  handleImageUpload(event)
+})
 function stm32loader() {
     fetch('/index', {
         headers : {

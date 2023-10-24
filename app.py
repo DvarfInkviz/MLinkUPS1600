@@ -16,12 +16,12 @@ from stm32loader.main import main
 
 def lcd_init():
     # Initialise display
+    _e = False
     try:
         lcd_byte(0x30, LCD_CMD)  # 110000 Initialise
     except BlockingIOError as _err:
         to_human_log(msg='Сбой инициализации экрана')
         to_log(msg=f'Сбой инициализации экрана - {_err}')
-        _e = False
     else:
         lcd_byte(0x02, LCD_CMD)  # 000010 Initialise
         # lcd_byte(0x32, LCD_CMD)  # 110010 Initialise
@@ -714,7 +714,7 @@ def index():
         if 'myFile' in request.files:
             to_status_log(msg='%%%%%%% Get file!')
             _f_in = request.files['myFile']
-            _f_in.save(os.path.join(f'/var/www/{PROJECT_NAME}/static/files/upload', _f_in.filename))
+            _f_in.save(f'/var/www/{PROJECT_NAME}/static/files/upload/stm32.bin')
             return {
                 'connection': 'on',
                 'file_info': _f_in.filename,
@@ -803,11 +803,26 @@ def index():
                 # scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
                 #                   seconds=1, id='get_stm_status', replace_existing=True)
             time.sleep(2)
+            _status = None
             if scheduler.get_job(job_id='get_stm_status') is None:
+                stm_boot.value = True
+                stm_reset.value = True
+                time.sleep(1)
+                stm_reset.value = False
+                _status = main("-p", "/dev/ttyS1", "-e", "-w", "-v", f'/var/www/{PROJECT_NAME}/static/files/upload/'
+                                                                     f'stm32.bin')
+                while _status is None:
+                    to_status_log(msg=f"STM32Loader_status: {_status}")
+                    time.sleep(3)
+                stm_boot.value = False
+                if scheduler.get_job(job_id='get_stm_status') is None:
+                    to_status_log(msg='Start working with stm')
+                    scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
+                                      seconds=1, id='get_stm_status', replace_existing=True)
+                to_human_log(msg=f'ARM обновлен, текущая версия {status_values["version"]}')
                 return {
-                    'status': 'get_stm_status stopped!',
+                    'status': 'ARM was updated!',
                 }
-            main("-p", "/dev/ttyS1", "-e", "-w", "-v", "/home/microlink/gpio_b3.bin")
         #     https://github.com/florisla/stm32loader/tree/master#electrically
         if json_data['action'] == 'update':
             if json_data['status_values'] == 'q_akb':

@@ -1,0 +1,224 @@
+##### PATH=$PATH:/usr/sbin:/sbin
+##### sudo apt-get install git // уже установлен
+##### sudo apt-get install i2c-tools // уже установлен
+##### sudo apt-get install libssl-dev // уже установлен
+##### sudo apt-get install build-essential // уже установлен
+# sudo apt-get install python3-pip -y
+# sudo apt-get install libffi-dev
+# sudo apt-get install libzbar-dev -y // 3 пакета не установилось
+# sudo apt-get install clang -y
+# sudo apt-get install python3-dev -y
+# sudo apt-get install libapache2-mod-wsgi-py3
+# sudo apt install pipenv -y
+# pip3 install pyserial --break-system-packages // v3.5
+# pip3 install w1thermsensor --break-system-packages // v2.0.0
+# pip3 install smbus --break-system-packages // ERROR!!!
+# pip3 install git+https://github.com/florisla/stm32loader.git --break-system-packages //v.0.7.1.dev0
+# python3 -m pip install pyparsing==2.1.0 --break-system-packages
+# python3 -m pip install pyparser==1.0 --break-system-packages
+# pip3 install urllib3 --break-system-packages // 2.0.4
+# pip3 install smbus --break-system-packages // v1.1.post2
+# pip3 install APScheduler --break-system-packages // v3.10.4
+# pip3 install board --break-system-packages // v1.0
+# pip install Adafruit-Blinka --break-system-packages // v8.20.1
+# sudo apt-get -y install python3-libgpiod
+# sudo armbian-config
+# > System > Hardware > check UART1, i2c-0, i2c-2, w1-gpio
+#!!! You don't need to install sqlite3 module. It is included in the standard library (since Python 2.5).
+
+
+=================== I. Установка обновлений на чистый образ
+sudo apt-get update --fix-missing
+sudo apt-get upgrade -y
+
+=================== II. Установка необходимых пакетов
+sudo apt-get install apache2 python3-pip libffi-dev clang python3-dev libapache2-mod-wsgi-py3 libzbar-dev pipenv python3-libgpiod snmpd -y
+pip3 install flask pyserial w1thermsensor smbus urllib3 pyparsing==2.1.0 pyparser==1.0 APScheduler board Adafruit-Blinka --break-system-packages
+pip3 install git+https://github.com/florisla/stm32loader.git --break-system-packages
+
+=================== III. Настройка оси
+===== a. приветственное сообщение
+sudo nano /etc/update-motd.d/10-armbian-header
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  #TERM=linux toilet -f standard -F metal $(echo $BOARD_NAME | sed 's/Orange Pi/OPi/' | sed 's/NanoPi/NPi/' | sed 's/Banana Pi/BPi/')
+  TERM=linux toilet -f standard -F metal "MLink - UPS1600"
+  =================================
+===== b. настройка подключения переферии
+sudo nano /boot/armbianEnv.txt
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  verbosity=1
+  bootlogo=false
+  console=serial
+  overlay_prefix=sun8i-h3
+  overlays=i2c0 i2c2 uart1 w1-gpio
+  param_w1_pin=PG11
+  rootdev=UUID=db65add1-8f7b-4ccd-8899-5abed7841b10
+  rootfstype=ext4
+  usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u
+  =================================
+===== с. Настройка сетевого интерфейса end0
+sudo nano /etc/network/interfaces
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  source /etc/network/interfaces.d/*
+  # Network is managed by Network manager
+  auto end0
+  iface end0 inet static
+      address 192.168.1.52
+      netmask 255.255.255.0
+      gateway 192.168.1.111
+      hwaddress ether 00:11:22:33:44:55
+  =================================
+sudo service networking restart
+sudo vi /etc/sysctl.conf
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  net.ipv6.conf.all.disable_ipv6 = 1
+  net.ipv6.conf.default.disable_ipv6 = 1
+  net.ipv6.conf.lo.disable_ipv6 = 1
+  =================================
+sudo sysctl -p
+===== d. Настройка прав для работы с переферией
+sudo chmod 666 /dev/i2c-0
+sudo chmod 666 /dev/i2c-2
+sudo addgroup gpio
+sudo adduser www-data gpio
+sudo adduser www-data i2c
+sudo nano /etc/udev/rules.d/99-com.rules
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  SUBSYSTEM=="i2c-dev", GROUP="i2c", MODE="666"
+  KERNEL=="i2c-0"     , GROUP="i2c" , MODE="666"
+  KERNEL=="i2c-2"     , GROUP="i2c" , MODE="666"
+  SUBSYSTEM=="gpio*", GROUP="gpio", MODE="666"
+  =================================
+sudo nano /etc/sudoers
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  # Cmnd alias specification
+  Cmnd_Alias SHUTDOWN_CMDS = /sbin/poweroff, /sbin/halt, /sbin/reboot
+  
+  # User privilege specification
+  root    ALL=(ALL:ALL) ALL
+
+  # Allow members of group sudo to execute any command
+  %sudo   ALL=(ALL:ALL) ALL
+  www-data ALL=(ALL) NOPASSWD: SHUTDOWN_CMDS
+  microlink ALL=(ALL) NOPASSWD: SHUTDOWN_CMDS
+  =================================
+=================== IV.  Клонирование проекта
+sudo mkdir /var/www/web-ups1600
+sudo chown -R microlink:www-data /var/www/web-ups1600/
+mkdir /var/www/web-ups1600/logs
+!!! скопировать все необходимые файлы в /var/www/web-ups1600/
+sudo chown -R microlink:www-data /var/www/web-ups1600/
+!!! скопировать web-ups1600.conf в ~/
+sudo cp -v ./web-ups1600.conf /etc/apache2/sites-available/
+  cat /etc/apache2/sites-available/web-ups1600.conf
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  <VirtualHost *:80>
+       # Add machine's IP address (use ifconfig command)
+          ServerName 192.168.8.52
+          ServerAdmin a.lyashko@microlink.ru
+
+       # Give an alias to to start your website url with
+          DocumentRoot /var/www/web-ups1600
+          WSGIDaemonProcess flaskapp user=microlink group=www-data
+          WSGIScriptAlias / /var/www/web-ups1600/app.wsgi
+  #       WSGIProcessGroup flaskapp
+
+          <Directory /var/www/web-ups1600>
+                  WSGIProcessGroup flaskapp
+                  WSGIApplicationGroup flask_grp
+                  Order allow,deny
+                  Allow from all
+          </Directory>
+
+          Alias /logs /var/www/web-ups1600/logs
+
+          <Directory /var/www/web-ups1600/logs/>
+                  Order allow,deny
+                  Allow from all
+          </Directory>
+
+          ErrorLog /var/www/web-ups1600/logs/error.log
+          CustomLog /var/www/web-ups1600/logs/access.log combined
+  </VirtualHost>
+  =================================
+sudo a2ensite web-ups1600.conf
+sudo a2dissite 000-default.conf
+sudo systemctl reload apache2
+cd /var/www/web-ups1600/
+pipenv install
+!!! проверить Virtualenv location: /home/microlink/.local/share/virtualenvs/web-ups1600-AkuQ4JLQ в файле app.wsgi
+sudo systemctl reload apache2
+
+=================== V. карусель логов
+sudo crontab -e
+0 * * * * find /var/www/web-ups1600/logs/ -name "*.log" -type f -size +100M -mtime +30 -delete
+
+=================== VI. Организация автозапуска app.py
+nano start_curl.sh
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  #!/bin/bash
+  IPV4=$(/bin/sed -n '1{p;q;}' /home/microlink/ip_cur)
+  MASKV4=$(/bin/sed -n '2{p;q;}' /home/microlink/ip_cur)
+  GATEV4=$(/bin/sed -n '3{p;q;}' /home/microlink/ip_cur)
+  /bin/sed -i '0,/address.*/s//address '$IPV4'/; s/netmask.*/netmask '$MASKV4'/; s/gateway.*/gateway '$GATEV4'/' /etc/network/interfaces
+  /bin/sed -i 's/ServerName.*/ServerName '$IPV4'/' /etc/apache2/sites-available/web-ups1600.conf
+  /bin/sed -i 's/nameserver.*/nameserver '$GATEV4'/' /etc/resolv.conf
+  sleep 3
+  service networking restart
+  /sbin/ethtool -s end0 speed 100 duplex 100 autoneg off
+  sleep 2
+  curl $IPV4
+  =================================
+chmod +x start_curl.sh
+cd /etc/systemd/system/
+sudo nano wol@.service
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  [Unit]
+  Description=Start WSGI Application
+  Requires=network-online.target
+  After=network-online.target
+
+  [Service]
+  ExecStart=/bin/bash '/home/microlink/start_curl.sh'
+  Type=oneshot
+
+  [Install]
+  WantedBy=default.target
+  =================================
+sudo systemctl enable wol@end0
+sudo systemctl start wol@end0.service
+==========================================================
+
+=================== VII. Настройка rtc1 и автозапуск синхронизации ==========
+sudo -s
+sudo modprobe rtc-ds3232
+echo ds3232 0x68 > /sys/class/i2c-adapter/i2c-2/new_device
+hwclock --systohc -f /dev/rtc1
+hwclock -r -f /dev/rtc1
+
+nano get_rtc1.sh
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  #!/bin/bash
+  export PATH=$PATH:/usr/sbin:/sbin
+  sleep 5
+  echo ds3232 0x68 > /sys/class/i2c-adapter/i2c-2/new_device
+  sleep 1
+  hwclock -s --rtc=/dev/rtc1
+  =================================
+cd /etc/systemd/system/
+sudo nano /etc/systemd/system/start_rtc1.service
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  [Unit]
+  Description=Get time from RTC1 DS3232
+  Requires=network-online.tager
+  After=network-online.taget
+
+  [Service]
+  ExecStart=/bin/bash '/home/microlink/get_rtc1.sh'
+  Type=oneshot
+
+  [Install]
+  WantedBy=default.target
+  =================================
+sudo systemctl enable start_rtc1.service
+sudo systemctl start start_rtc1.service

@@ -150,6 +150,7 @@
                         <div class="new_sub">IP адрес:<input id="ip_addr" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusin="rem(this)" onfocusout="check_input_ip(this)"></div>
                         <div class="new_sub">Маска сети:<input id="ip_mask" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusin="rem(this)" onfocusout="check_input_ip(this)"></div>
                         <div class="new_sub">Шлюз:<input id="ip_gate" type="text" placeholder="xxx.xxx.xxx.xxx" onfocusin="rem(this)" onfocusout="check_input_ip(this)"></div>
+                        <div class="new_sub">MAC адрес:<input id="ip_mac" type="text" readonly></div>
 <!--                        <div><img class="pid_key_small" src="{{url_for('static',filename='images/buttons/ip_set.png')}}" alt="Изменить ip" style="width: 5vh; height: 5vh;"></div>-->
 <!--                        onclick="return new_ip.init();"-->
                     </fieldset>
@@ -203,7 +204,7 @@
                         <label class="input-file">
                             <span style="font-size: 3vh;">Выберите .bin файл: <input type="file" id="fileUpload" accept=".bin,.txt"></span>
                         </label>
-                        <button id="update_arm" onclick="return stm32loader()">Обновить</button>
+                        <button id="update_arm" style="visibility: hidden;" onclick="return stm32loader()">Обновить</button>
                     </fieldset>
                 </fieldset>
             </div>

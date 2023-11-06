@@ -543,6 +543,9 @@ scheduler.start()
 temp_time = 1
 cnt1_error = 0
 cnt2_error = 0
+with open("/etc/network/interfaces", 'r', encoding='utf-8') as _file:
+    _d = _file.readlines()
+    mac = _d[-1].split(sep=' ')[-1][:-1]
 if not os.path.isfile(f"/home/microlink/uptime"):
     with open(f"/home/microlink/uptime", 'w', encoding='utf-8') as _file:
         _file.write('0')
@@ -791,11 +794,24 @@ def index():
                 'ip_addr': status_values['ip_addr'],
                 'ip_mask': status_values['ip_mask'],
                 'ip_gate': status_values['ip_gate'],
+                'ip_mac': mac,
                 'datetime': datetime.now().strftime('%Y-%m-%d %H:%M'),
                 'time_zone': 3,
             }
         if json_data['action'] == 'reboot':
-            time.sleep(5)
+            if status_values['ip_addr'] != json_data['ipv4']:
+                to_human_log(msg=f"Изменили IP адрес на {json_data['ipv4']}")
+                status_values['ip_addr'] = json_data['ipv4']
+            if status_values['ip_mask'] != json_data['mask4']:
+                to_human_log(msg=f"Изменили Маску сети на {json_data['mask4']}")
+                status_values['ip_mask'] = json_data['mask4']
+            if status_values['ip_gate'] != json_data['gate4']:
+                to_human_log(msg=f"Изменили Шлюз на {json_data['gate4']}")
+                status_values['ip_gate'] = json_data['gate4']
+            with open(f"/home/microlink/ip_cur", 'w') as cur_f:
+                cur_f.writelines([f"{status_values['ip_addr']}\n", f"{status_values['ip_mask']}\n",
+                                  f"{status_values['ip_gate']}\n"])
+            time.sleep(1)
             os.system("sudo /sbin/reboot")
         if json_data['action'] == 'stm32loader':
             if scheduler.get_job(job_id='get_stm_status'):
@@ -803,27 +819,42 @@ def index():
                 # scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
                 #                   seconds=1, id='get_stm_status', replace_existing=True)
             time.sleep(2)
-            _status = None
+            ss = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
+                               xonxoff=False, rtscts=False, dsrdtr=False)
+            # to_status_log(msg=f"open port {s.name}")
+            if ss.is_open:
+                ss.close()
+            # _status = None
             if scheduler.get_job(job_id='get_stm_status') is None:
                 stm_boot.value = True
                 stm_reset.value = True
                 time.sleep(1)
                 stm_reset.value = False
-                _status = main("-p", "/dev/ttyS1", "-e", "-w", "-v", f'/var/www/{PROJECT_NAME}/static/files/upload/'
-                                                                     f'stm32.bin')
-                while _status is None:
-                    to_status_log(msg=f"STM32Loader_status: {_status}")
-                    time.sleep(3)
-                stm_boot.value = False
-                if scheduler.get_job(job_id='get_stm_status') is None:
-                    to_status_log(msg='Start working with stm')
-                    scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
-                                      seconds=1, id='get_stm_status', replace_existing=True)
-                to_human_log(msg=f'ARM обновлен, текущая версия {status_values["version"]}')
+                time.sleep(1)
+                main("-p", "/dev/ttyS1", "-e", "-w", "-v", f'/var/www/{PROJECT_NAME}/static/files/upload/stm32.bin')
+                # while _status is None:
+                # to_status_log(msg=f"STM32Loader_status: {_status}")
+                time.sleep(10)
+                # stm_boot.value = False
                 return {
                     'status': 'ARM was updated!',
                 }
         #     https://github.com/florisla/stm32loader/tree/master#electrically
+        if json_data['action'] == 'stm32_work':
+            stm_boot.value = False
+            time.sleep(0.5)
+            stm_reset.value = True
+            time.sleep(1)
+            stm_reset.value = False
+            time.sleep(1)
+            if scheduler.get_job(job_id='get_stm_status') is None:
+                to_status_log(msg='Start working with stm')
+                scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
+                                  seconds=1, id='get_stm_status', replace_existing=True)
+            to_human_log(msg=f'ARM обновлен, текущая версия {status_values["version"]}')
+            return {
+                'status': 'STM_work start!',
+            }
         if json_data['action'] == 'update':
             if json_data['status_values'] == 'q_akb':
                 status_values["i_charge_max"] = int(json_data['value']/10)

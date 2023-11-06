@@ -280,6 +280,7 @@ function show_fieldset(number) {
                                 document.getElementById('ip_addr').value = response.ip_addr;
                                 document.getElementById('ip_mask').value = response.ip_mask;
                                 document.getElementById('ip_gate').value = response.ip_gate;
+                                document.getElementById('ip_mac').value = response.ip_mac;
                                 document.getElementById('localdaytime').value = response.datetime;
                                 document.getElementById('btn_reboot').style.visibility = 'hidden';
                             }
@@ -313,6 +314,8 @@ function check_input(el) {
     })
 }
 function reboot_pc() {
+    spinner.init();
+    ip4 = document.getElementById('ip_addr').value;
     fetch('/index', {
         headers : {
             'Content-Type' : 'application/json'
@@ -320,26 +323,33 @@ function reboot_pc() {
         method : 'POST',
         body : JSON.stringify( {
             'action' : 'reboot',
+            'ipv4': document.getElementById('ip_addr').value,
+            'mask4': document.getElementById('ip_mask').value,
+            'gate4': document.getElementById('ip_gate').value,
         })
     })
-    show_fieldset(0);
+    setTimeout(reload_page, 30000);
+}
+function reload_page() {
+    close_popup();
+    window.open("http://"+ip4, "_self");
 }
 function check_input_ip(el) {
     let text = el.value;
     if ((el.id == 'ip_addr')&&(ip4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
     if ((el.id == 'ip_mask')&&(mask4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
     if ((el.id == 'ip_gate')&&(gate4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
-    fetch('/index', {
-        headers : {
-            'Content-Type' : 'application/json'
-        },
-        method : 'POST',
-        body : JSON.stringify( {
-            'action' : 'update_ip',
-            'status_values': el.id,
-            'value' : text,
-        })
-    })
+//    fetch('/index', {
+//        headers : {
+//            'Content-Type' : 'application/json'
+//        },
+//        method : 'POST',
+//        body : JSON.stringify( {
+//            'action' : 'update_ip',
+//            'status_values': el.id,
+//            'value' : text,
+//        })
+//    })
 }
 // ----- /
 const handleImageUpload = event => {
@@ -355,6 +365,7 @@ const handleImageUpload = event => {
         if(response.ok) {
             response.json()
             .then(function(response) {
+                document.getElementById('update_arm').style.visibility = 'visible';
                 console.log(response.file_info)
             })
         }
@@ -368,6 +379,7 @@ document.querySelector('#fileUpload').addEventListener('change', event => {
   handleImageUpload(event)
 })
 function stm32loader() {
+    spinner.init();
     fetch('/index', {
         headers : {
             'Content-Type' : 'application/json'
@@ -382,6 +394,23 @@ function stm32loader() {
             response.json()
             .then(function(response) {
                 console.log(response.status);
+                close_popup();
+                show_fieldset(0);
+                    fetch('/index', {
+                        headers : {
+                            'Content-Type' : 'application/json'
+                        },
+                        method : 'POST',
+                        body : JSON.stringify( {
+                            'action' : 'stm32_work',
+                        })
+                    })
+                    .then(function (response){
+                        if(response.ok) {
+                            response.json()
+                            .then(function(response) {
+                                console.log(response.status);
+                })}})
             })
         }
     })
@@ -504,3 +533,40 @@ function adddata(download = NaN, upload = NaN, label = moment()) {
   myChart.update();
 }
 //-----------//
+// SPINNER //
+const spinner = {
+    elements: {
+        popup: null,
+        box: null,
+        usrContainer: null
+    },
+    init(_id, _bd) {
+        this.elements.main = document.createElement("div");
+        this.elements.main.classList.add("pop_up");
+        this.elements.box = document.createElement("fieldset");
+        this.elements.box.classList.add("add_box");
+        let keyElement = document.createElement("div");
+        keyElement.classList.add("user_box");
+        keyElement.textContent = "LOAD...";
+        keyElement.style.height = "200px";
+
+        this.elements.usrContainer = document.createElement("div");
+        this.elements.usrContainer.classList.add("load-1");
+        let keyElement2 = document.createElement("div");
+        keyElement2.classList.add("line")
+        this.elements.usrContainer.appendChild(keyElement2);
+        keyElement2 = document.createElement("div");
+        keyElement2.classList.add("line")
+        this.elements.usrContainer.appendChild(keyElement2);
+        keyElement2 = document.createElement("div");
+        keyElement2.classList.add("line");
+        this.elements.usrContainer.appendChild(keyElement2);
+        keyElement.appendChild(this.elements.usrContainer);
+        this.elements.box.appendChild(keyElement);
+
+        this.elements.main.appendChild(this.elements.box);
+        document.getElementById('main').appendChild(this.elements.main);
+    }
+};
+// ----- //
+function close_popup() {$('.pop_up').remove();}

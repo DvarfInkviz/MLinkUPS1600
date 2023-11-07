@@ -22,6 +22,7 @@ def lcd_init():
     except BlockingIOError as _err:
         to_human_log(msg='Сбой инициализации экрана')
         to_log(msg=f'Сбой инициализации экрана - {_err}')
+        _e = False
     else:
         lcd_byte(0x02, LCD_CMD)  # 000010 Initialise
         # lcd_byte(0x32, LCD_CMD)  # 110010 Initialise

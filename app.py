@@ -539,6 +539,22 @@ K_U3 = 1.189
 K_U4 = 1.016
 K_I1 = 23.2
 IAKB1_0 = 1487
+START_CURL_SH = ["/usr/bin/python3 /home/microlink/STM_loader.py\n",
+                 "IPV4=$(/bin/sed -n '1{p;q;}' /home/microlink/ip_cur)\n",
+                 "MASKV4=$(/bin/sed -n '2{p;q;}' /home/microlink/ip_cur)\n",
+                 "GATEV4=$(/bin/sed -n '3{p;q;}' /home/microlink/ip_cur)\n",
+                 "/bin/sed -i '0,/address.*/s//address '$IPV4'/; s/netmask.*/netmask '$MASKV4'/; s/gateway.*/gateway "
+                 "'$GATEV4'/' /etc/network/interfaces\n",
+                 "/bin/sed -i 's/ServerName.*/ServerName '$IPV4'/' /etc/apache2/sites-available/web-ups1600.conf\n",
+                 "/bin/sed -i 's/nameserver.*/nameserver '$GATEV4'/' /etc/resolv.conf\n",
+                 "sleep 1\n",
+                 "service networking restart\n",
+                 "sleep 5\n",
+                 "/sbin/ethtool -s end0 speed 100 duplex full autoneg off\n",
+                 "sleep 5\n",
+                 "curl $IPV4\n",
+                 "sleep 2\n",
+                 "curl $IPV4\n"]
 scheduler = BackgroundScheduler()
 scheduler.start()
 temp_time = 1
@@ -591,7 +607,7 @@ status_values = {'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'ua
                  'menu_0_4': 'Settings      >>; ', 'sub_cnt4': 4,
                  'menu_0_5': 'IP address:; ', 'sub_cnt5': 0,
                  'menu_0_6': f'Operating up;time {up_time:10.1f}h', 'discharge_depth': int(ups_set[9]), 'sub_cnt6': 0,
-                 'menu_0_7': f'Version:;', 'sub_cnt7': 0,
+                 'menu_0_7': f'Version:;', 'menu_0_8': f'Update process..;Step 1 - wait...', 'sub_cnt7': 0,
                  'max_temp_air': int(ups_set[10]), 'ip_addr': '192.168.1.10', 'ip_mask': '255.255.255.0',
                  'ip_gate': '192.168.1.1', 'version': '0.0'}
 # u_load_max TEXT DEFAULT '4000',    1
@@ -815,31 +831,19 @@ def index():
             time.sleep(1)
             os.system("sudo /sbin/reboot")
         if json_data['action'] == 'stm32loader':
-            if scheduler.get_job(job_id='get_stm_status'):
-                scheduler.remove_job(job_id='get_stm_status')
-                # scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
-                #                   seconds=1, id='get_stm_status', replace_existing=True)
+            if scheduler.get_job(job_id='menu'):
+                scheduler.remove_job(job_id='menu')
             time.sleep(2)
-            ss = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
-                               xonxoff=False, rtscts=False, dsrdtr=False)
-            # to_status_log(msg=f"open port {s.name}")
-            if ss.is_open:
-                ss.close()
-            # _status = None
-            if scheduler.get_job(job_id='get_stm_status') is None:
-                stm_boot.value = True
-                stm_reset.value = True
+            if scheduler.get_job(job_id='press'):
+                scheduler.remove_job(job_id='press')
+            time.sleep(2)
+            if scheduler.get_job(job_id='menu') is None and scheduler.get_job(job_id='press') is None:
+                lcd_string(status_values[f'menu_0_8'].split(sep=';')[0], LCD_LINE_1)
+                lcd_string(status_values[f'menu_0_8'].split(sep=';')[1], LCD_LINE_2)
+                with open(f"/home/microlink/start_curl.sh", 'w') as curl_f:
+                    curl_f.writelines(START_CURL_SH)
                 time.sleep(1)
-                stm_reset.value = False
-                time.sleep(1)
-                main("-p", "/dev/ttyS1", "-e", "-w", "-v", f'/var/www/{PROJECT_NAME}/static/files/upload/stm32.bin')
-                # while _status is None:
-                # to_status_log(msg=f"STM32Loader_status: {_status}")
-                time.sleep(10)
-                # stm_boot.value = False
-                return {
-                    'status': 'ARM was updated!',
-                }
+                os.system("sudo /sbin/reboot")
         #     https://github.com/florisla/stm32loader/tree/master#electrically
         if json_data['action'] == 'stm32_work':
             stm_boot.value = False

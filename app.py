@@ -389,6 +389,7 @@ def menu(values):
                 if values["submenu"] == 1 and values["i_charge_max"] < 20:
                     values["i_charge_max"] += 1
                     values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10:14}Ah'
+                    values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
                 if values["submenu"] == 2 and values["discharge_depth"] < 90:
                     values["discharge_depth"] += 10
                     values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]:15}%'
@@ -532,14 +533,14 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.7'
+MCU_VERSION = 'mcu.1.9'
 K_U1 = 1.278
 K_U2 = 1.208
 K_U3 = 1.189
 K_U4 = 1.016
 K_I1 = 23.2
 IAKB1_0 = 1487
-START_CURL_SH = ["/usr/bin/python3 /home/microlink/STM_loader.py\n",
+START_CURL_SH = ["/usr/bin/python3 /home/microlink/STM_loader.py &> /home/microlink/stdout_file.txt\n",
                  "IPV4=$(/bin/sed -n '1{p;q;}' /home/microlink/ip_cur)\n",
                  "MASKV4=$(/bin/sed -n '2{p;q;}' /home/microlink/ip_cur)\n",
                  "GATEV4=$(/bin/sed -n '3{p;q;}' /home/microlink/ip_cur)\n",

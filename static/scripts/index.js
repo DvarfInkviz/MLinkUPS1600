@@ -1,7 +1,7 @@
 // INPUTMASK //
 document.addEventListener('DOMContentLoaded', function () {
     $("#i_load_max").inputmask({mask: "9{2}A", placeholder: '_'});
-    $("#discharge_depth").inputmask({mask: "9{2}%", placeholder: '_'});
+    $("#discharge_depth").inputmask({mask: "9{1}0%", placeholder: '_'});
     $("#q_akb").inputmask({mask: "9{2,3}А\u00B7ч", placeholder: '_'});
     $("#u_abc_max").inputmask({mask: "9{2}B", placeholder: '_'});
     $("#max_temp_air").inputmask({mask: "9{2}\u00B0C", placeholder: '_'});
@@ -298,8 +298,33 @@ function rem(el) {
     if (el.id == 'ip_gate') {gate4 = el.value}
 }
 function check_input(el) {
-    let text = el.value;
+    let text = el.value.substring(0, 2);
     while (text.indexOf('_') >= 0) {text = text.replace('_', '0');}
+    if (el.id == 'i_load_max') {
+        if (parseFloat(text) < 20) {text = '20';}
+        if (parseFloat(text) > 80) {text = '80';}
+        text = text + 'A';
+    }
+    if (el.id == 'discharge_depth') {
+        if (parseFloat(text) < 30) {text = '3';}
+        if (parseFloat(text) > 90) {text = '9';}
+        text = text + '0%';
+    }
+    if (el.id == 'u_abc_max') {
+        if (parseFloat(text) < 44) {text = '44';}
+        if (parseFloat(text) > 60) {text = '60';}
+        text = text + 'B';
+    }
+    if (el.id == 'q_akb') {
+        if (parseFloat(text) < 40) {text = '40';}
+        if (parseFloat(text) > 200) {text = '200';}
+        text = text + 'A\u00B7ч';
+    }
+    if (el.id == 'max_temp_air') {
+        if (parseFloat(text) < 30) {text = '30';}
+        if (parseFloat(text) > 60) {text = '60';}
+        text = text + '\u00B0C';
+    }
     el.value = text;
     fetch('/index', {
         headers : {

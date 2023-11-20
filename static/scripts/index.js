@@ -306,9 +306,10 @@ function check_input(el) {
         text = text + 'A';
     }
     if (el.id == 'discharge_depth') {
-        if (parseFloat(text) < 30) {text = '3';}
-        if (parseFloat(text) > 90) {text = '9';}
-        text = text + '0%';
+        if (parseFloat(text) <= 30) {text = '3';}
+        if (parseFloat(text) >= 90) {text = '9';}
+        if ((parseFloat(text) > 30)&&(parseFloat(text) < 90)) {text = text + '%';}
+        else {text = text + '0%';}
     }
     if (el.id == 'u_abc_max') {
         if (parseFloat(text) < 44) {text = '44';}

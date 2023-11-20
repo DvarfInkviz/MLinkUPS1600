@@ -198,7 +198,18 @@ def get_stm_status(values):
         in_buf = list(s.read(size=51))
         _u_akb4 = 0
         if len(in_buf) == 51:
-            to_status_log(str(in_buf))
+            to_status_log(msg=f"-=-From STM-=-\nErr:{str(in_buf[:2])},"
+                              f"Status:{str(in_buf[2])},"
+                              f"ADC:{str(in_buf[3:20])},"
+                              f"U_akb_max_pc:{str(in_buf[20])},"
+                              f"pcs1:{str(in_buf[21:29])},"
+                              f"pcs2:{str(in_buf[29:37])},"
+                              f"pcs3:{str(in_buf[37:45])},"
+                              f"state:{str(in_buf[45])},"
+                              f"U_bv:{str(in_buf[46:48])},"
+                              f"Rele_in:{str(in_buf[48])},"
+                              f"Rele_out:{str(in_buf[49])},"
+                              f"ver.:{str(in_buf[50])}")
             values['version'] = f'arm.{in_buf[50]//10}.{in_buf[50]%10}'
             values['menu_0_7'] = f"Version:;{values['version']} {MCU_VERSION}"
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
@@ -336,8 +347,13 @@ def get_stm_status(values):
                                           format(int(IAKB1_0), '04x')
                                           )
         except ValueError as _err:
-            to_status_log(msg=f'ValueError: {_err}')
+            to_status_log(msg=f"ValueError: {_err}; {values['discharge_abc']}, {values['discharge_akb']}, "
+                              f"{values['i_load_max']}, {values['u_akb_max']}, {values['u_abc_max']},"
+                              f"{values['i_charge_max']}, {values['k_u_akb']}, {values['k_i_akb']},"
+                              f"{values['t_delay']}, {values['temp2']}, {values['max_temp_air']},"
+                              f"{values['iakb1']}, {values['u_akb_max']*4 - _u_akb4}, {values['uload']}")
         else:
+            to_status_log(msg=f"-=-To STM-=-\n{str(list(s_out))}")
             to_log(str(list(s_out)))
             s.write(s_out)
         finally:
@@ -573,7 +589,10 @@ else:
         all_time = int(_f.readline())
     if os.path.isfile(f"/home/microlink/up_cur"):
         with open(f"/home/microlink/up_cur", 'r') as _file:
-            all_time += int(_file.readline().split(sep='.')[0])
+            try:
+                all_time += int(_file.readline().split(sep='.')[0])
+            except Exception as error:
+                to_status_log(msg=f"Error in file 'up_cur' ({Exception})")
     with open(f"/home/microlink/uptime", 'w', encoding='utf-8') as _f:
         _f.write(str(all_time))
     up_time = all_time / 3600

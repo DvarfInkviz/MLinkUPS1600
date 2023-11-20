@@ -221,7 +221,31 @@ sudo nano /etc/systemd/system/start_rtc1.service
 sudo armbian-install
 2 - ok - ok - PowerOff
 ===== выключить, вытащить SD, включить и подключиться по SSH
-===== a. заменить MAC адрес в настройках сети
+===== a. Отключить перезапуск apache2
+sudo nano /etc/logrotate.d/apache2
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  /var/log.hdd/apache2/*.log {
+          daily
+          missingok
+          rotate 14
+          compress
+          delaycompress
+          notifempty
+          create 640 root adm
+          sharedscripts
+          prerotate
+                  if [ -d /etc/logrotate.d/httpd-prerotate ]; then
+                          run-parts /etc/logrotate.d/httpd-prerotate
+                  fi
+          endscript
+  #       postrotate
+  #               if pgrep -f ^/usr/sbin/apache2 > /dev/null; then
+  #                       invoke-rc.d apache2 reload 2>&1 | logger -t apache2.logrotate
+  #               fi
+  #       endscript
+  }
+  =================================
+===== b. заменить MAC адрес в настройках сети
 sudo nano /etc/network/interfaces
   vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
   source /etc/network/interfaces.d/*
@@ -233,23 +257,23 @@ sudo nano /etc/network/interfaces
       gateway 192.168.1.111
       hwaddress ether 70:B3:D5:12:92:A7
   =================================
-===== b. заменить hostname последние два байта от МАС адреса
+===== c. заменить hostname последние два байта от МАС адреса
 sudo nano /etc/hostname
   vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
   mlink-ups-92a7
   =================================
-===== с. прописать RTC1 в ПК
+===== d. прописать RTC1 в ПК
 sudo -s
 sudo modprobe rtc-ds3232
 echo ds3232 0x68 > /sys/class/i2c-adapter/i2c-2/new_device
-===== d. проверить время
+===== e. проверить время
 date
 !!! если время неправильное, то подключить ПК к интернету и выполнить команду:
 sudo date -s "$(curl -s --head http://google.com | grep ^Date: | sed 's/Date: //g')"
-===== e. записать время в RTC1
+===== f. записать время в RTC1
 hwclock --systohc -f /dev/rtc1
 hwclock -r -f /dev/rtc1
 exit
-===== f. запустить сервис
+===== g. запустить сервис
 sudo systemctl enable start_rtc1.service
 sudo systemctl start start_rtc1.service

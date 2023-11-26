@@ -23,7 +23,7 @@
                 <a href="#information" style="width: 100%;" onclick="return show_fieldset('0')" id="ah_0"><button class="btn_menu" id="btn_0">Состояние</button></a>
                 <a href="#logs" style="width: 100%;" onclick="return show_fieldset('1')" id="ah_1"><button class="btn_menu" id="btn_1">Журнал</button></a>
                 <a href="#settings" style="width: 100%;" onclick="return show_fieldset('2')" id="ah_2"><button class="btn_menu" id="btn_2">Уставки</button></a>
-                <a href="#update" style="width: 100%;" onclick="return show_fieldset('3')" id="ah_3"><button class="btn_menu" id="btn_3">Обновление</button></a>
+<!--                <a href="#update" style="width: 100%;" onclick="return show_fieldset('3')" id="ah_3"><button class="btn_menu" id="btn_3">Обновление</button></a>-->
             </div>
             <div class="main-base" id="main-base" style="padding: 0 1.38vh;">
                 <fieldset class="base-fieldset" style="z-index: 100; flex-direction: column; flex-wrap: wrap; justify-content: flex-start;" id="fs_0">
@@ -177,9 +177,9 @@
                     </fieldset>
                     <fieldset style="width: 80vh;">
                         <legend style="text-align: left; font-size: 2.5vh;">Дата и время</legend>
-                        <div class="new_sub">Дата и время<input type="datetime-local" id="localdaytime" min="2023-01-01 00:00" readonly></div>
+                        <div class="new_sub">Дата и время UTC<input type="datetime-local" id="utctime" min="2023-01-01 00:00" onfocusout="send_time(this)"></div>
                         <div class="new_sub">Часовой пояс
-                            <select name="time_zone" id="time_zone" onchange="">
+                            <select name="time_zone" id="time_zone" onchange="send_tz(this)">
                                   <option value=0>0 ч</option>
                                   <option value=1>+1 ч</option>
                                   <option value=2>+2 ч</option>

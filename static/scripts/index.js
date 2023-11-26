@@ -227,7 +227,7 @@ function show_fieldset(number) {
     for(var y = 0; y < nodes.length; y++){
          nodes[y].disabled = false;
     }
-    for (var i = 0; i<4; i++) {
+    for (var i = 0; i<3; i++) {
         if ((document.getElementById('fs_'+i))&&(i != number)) {
             document.getElementById('fs_'+i).style.visibility = 'hidden';
             document.getElementById('fs_'+i).style.zIndex = '0';
@@ -281,7 +281,7 @@ function show_fieldset(number) {
                                 document.getElementById('ip_mask').value = response.ip_mask;
                                 document.getElementById('ip_gate').value = response.ip_gate;
                                 document.getElementById('ip_mac').value = response.ip_mac;
-                                document.getElementById('localdaytime').value = response.datetime;
+                                document.getElementById('utctime').value = response.datetime;
                                 document.getElementById('btn_reboot').style.visibility = 'hidden';
                             }
                         })
@@ -336,6 +336,31 @@ function check_input(el) {
             'action' : 'update',
             'status_values': el.id,
             'value' : parseFloat(text),
+        })
+    })
+}
+function send_time(el){
+    fetch('/index', {
+        headers : {
+            'Content-Type' : 'application/json'
+        },
+        method : 'POST',
+        body : JSON.stringify( {
+            'action' : 'updateutc',
+            'value' : el.value,
+        })
+    })
+}
+function send_tz(el){
+    console.log(el.value)
+    fetch('/index', {
+        headers : {
+            'Content-Type' : 'application/json'
+        },
+        method : 'POST',
+        body : JSON.stringify( {
+            'action' : 'updatetz',
+            'value' : el.value,
         })
     })
 }

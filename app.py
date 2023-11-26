@@ -549,7 +549,7 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.9'
+MCU_VERSION = 'mcu.1.10'
 K_U1 = 1.278
 K_U2 = 1.208
 K_U3 = 1.189
@@ -702,6 +702,9 @@ to_human_log(msg=f'Прибор включили, веб-сервис запущ
 lcd_error = lcd_init()
 lcd_string(status_values['menu_0_0'].split(sep=';')[0], LCD_LINE_1)
 lcd_string(status_values['menu_0_0'].split(sep=';')[1], LCD_LINE_2)
+with open(f"/etc/timezone", 'r') as tz_f:
+    _time = tz_f.readline()
+status_values['tz'] = _time[8:-1]
 status_values['w1temp'] = W1ThermSensor.get_available_sensors()
 if len(status_values['w1temp']) == 2:
     status_values['temp1_id'] = status_values['w1temp'][0].id
@@ -788,7 +791,7 @@ def index():
                 'dry3_out': int(status_values['rele_out'][2]),
                 'dry4_out': int(status_values['rele_out'][3]),
                 'u_load_max': status_values['u_load_max'],
-                'time_zone': 3,
+                'time_zone': status_values['tz'],
                 'iakb1': f'{status_values["iakb1"]:.2f}',
                 'uakb1': f'{status_values["uakb1"]:.1f}',
                 'uakb2': f'{status_values["uakb2"]:.1f}',
@@ -832,8 +835,23 @@ def index():
                 'ip_mask': status_values['ip_mask'],
                 'ip_gate': status_values['ip_gate'],
                 'ip_mac': mac,
-                'datetime': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                'time_zone': 3,
+                'datetime': datetime.utcnow().strftime('%Y-%m-%d %H:%M'),
+                'time_zone': status_values['tz'],
+            }
+        if json_data['action'] == 'updateutc':
+            os.system(f"sudo /usr/bin/date -s '{json_data['value'].replace('T', ' ')}' --utc")
+            os.system('sudo /usr/sbin/hwclock --systohc -f /dev/rtc1')
+            return {
+                'status': 'ok',
+            }
+        if json_data['action'] == 'updatetz':
+            os.system(f"sudo /usr/bin/timedatectl set-timezone Etc/GMT-{json_data['value']}")
+            os.system('sudo /usr/sbin/hwclock --systohc -f /dev/rtc1')
+            status_values['tz'] = json_data['value']
+            with open(f"/etc/timezone", 'w') as tz_f:
+                tz_f.writelines(f"Etc/GMT-{json_data['value']}\n")
+            return {
+                'status': 'ok',
             }
         if json_data['action'] == 'reboot':
             if status_values['ip_addr'] != json_data['ipv4']:

@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 import sqlite3
 from flask import Flask, render_template, request, redirect, flash, url_for, session
-from w1thermsensor import W1ThermSensor
+from w1thermsensor import W1ThermSensor, SensorNotReadyError, NoSensorFoundError
 # import subprocess
 from apscheduler.schedulers.background import BackgroundScheduler
 from stm32loader.main import main
@@ -120,13 +120,26 @@ def update_temp(values):
     global cnt2_error
     try:
         values['temp1'] = values['w1temp'][0].get_temperature()
-        values['menu_3_1'] = f'Q={values["i_charge_max"]*10:5} Ah;T={values["temp1"]:5.1f} C'
+        values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
         cnt1_error = 0
     except IndexError as _err:
         values['temp1'] = 0
         to_status_log(msg=f'Temp1_error: {_err}')
+        values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T= n/a C'
         if cnt1_error < 3:
-            to_human_log(msg='Датчик температуры на АКБ не подключен или вышел из строя!')
+            to_human_log(msg='Датчик температуры на АКБ не подключен!')
+            cnt1_error += 1
+    except SensorNotReadyError:
+        values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T= n/a C'
+        to_status_log(msg=f'Temp1_error: is not ready to read')
+        if cnt1_error < 3:
+            to_human_log(msg='Датчик температуры на АКБ не готов к чтению!')
+            cnt1_error += 1
+    except NoSensorFoundError:
+        values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T= n/a C'
+        to_status_log(msg=f'Temp1_error: Could not find sensor of type DS18B20')
+        if cnt1_error < 3:
+            to_human_log(msg='Датчик температуры на АКБ вышел из строя!')
             cnt1_error += 1
     try:
         values['temp2'] = values['w1temp'][1].get_temperature()
@@ -135,7 +148,17 @@ def update_temp(values):
         to_status_log(msg=f'Temp2_error: {_err}')
         values['temp2'] = 0
         if cnt2_error < 3:
-            to_human_log(msg='Датчик температуры в шкафу не подключен или вышел из строя!')
+            to_human_log(msg='Датчик температуры в шкафу не подключен!')
+            cnt2_error += 1
+    except SensorNotReadyError:
+        to_status_log(msg=f'Temp2_error: is not ready to read')
+        if cnt2_error < 3:
+            to_human_log(msg='Датчик температуры в шкафу не готов к чтению!')
+            cnt2_error += 1
+    except NoSensorFoundError:
+        to_status_log(msg=f'Temp2_error: Could not find sensor of type DS18B20')
+        if cnt2_error < 3:
+            to_human_log(msg='Датчик температуры в шкафу вышел из строя!')
             cnt2_error += 1
 
 
@@ -210,11 +233,15 @@ def get_stm_status(values):
                               f"Rele_in:{str(in_buf[48])},"
                               f"Rele_out:{str(in_buf[49])},"
                               f"ver.:{str(in_buf[50])}")
-            values['version'] = f'arm.{in_buf[50]//10}.{in_buf[50]%10}'
+            values['version'] = f'arm.{in_buf[50] // 10}.{in_buf[50] % 10}'
             values['menu_0_7'] = f"Version:;{values['version']} {MCU_VERSION}"
             values['err'] = get_error_status(cur=in_buf[1], old=values['err'])
             values['menu_0_1'] = f'{datetime.now().strftime("%H:%M %d.%m.%Y")};Error code:{values["err"]:5}'
             values['iakb1'] = (in_buf[4] * 256 + in_buf[5] - IAKB1_0) / values['k_i_akb']
+            # values['uakb1'] = (in_buf[7] * 256 + in_buf[8]) * 3.3 / 4096 * 20 * K_U1
+            # values['uakb2'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * K_U2
+            # values['uakb3'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * K_U3
+            # values['uakb4'] = (in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * K_U4
             values['uakb1'] = (in_buf[7] * 256 + in_buf[8]) * 3.3 / 4096 * 20 * K_U1
             values['uakb2'] = (in_buf[10] * 256 + in_buf[11]) * 3.3 / 4096 * 20 * K_U2 - values['uakb1']
             values['uakb3'] = (in_buf[13] * 256 + in_buf[14]) * 3.3 / 4096 * 20 * K_U3 - values['uakb2'] - \
@@ -302,7 +329,7 @@ def get_stm_status(values):
             values['menu_2_1'] = f'UA={values["ua"]} UB={values["ub"]};UC={values["uc"]}'
             values['menu_3_0'] = f'U1={values["uakb1"]:.1f} U2={values["uakb2"]:.1f};U3={values["uakb3"]:.1f} ' \
                                  f'U4={values["uakb4"]:.1f}'
-            values['menu_3_1'] = f'Q={values["i_charge_max"]*10:5} Ah;T={values["temp1"]:5.1f} C'
+            values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
             if values['temp1'] > 20:
                 values['discharge_abc'] = u_akb_dict[40][values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[40][30]
@@ -312,7 +339,7 @@ def get_stm_status(values):
                 values['discharge_akb'] = u_akb_dict[0][30]
                 values['u_akb_max'] = u_akb_dict[0][100]
         try:
-            if int(abs((values['u_akb_max']*4 - _u_akb4)*10)) > 255:
+            if int(abs((values['u_akb_max'] * 4 - _u_akb4) * 10)) > 255:
                 s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
                                           format(int(float(values['discharge_akb']) * 10), '02x') +
                                           format(int(float(values['i_load_max'])), '02x') +
@@ -324,9 +351,9 @@ def get_stm_status(values):
                                           format(int(float(values['t_delay']) / 10), '02x') +
                                           format(int(float(values['temp2'])), '02x') +
                                           format(int(float(values['max_temp_air'])), '02x') +
-                                          format(int(abs(values['iakb1']*10)), '02x') +
+                                          format(int(abs(values['iakb1'] * 10)), '04x') +
                                           format(int(255), '02x') +
-                                          format(int(abs(values['uload']*10)), '04x') +
+                                          format(int(abs(values['uload'] * 10)), '04x') +
                                           format(int(IAKB1_0), '04x')
                                           )
             else:
@@ -341,9 +368,9 @@ def get_stm_status(values):
                                           format(int(float(values['t_delay']) / 10), '02x') +
                                           format(int(float(values['temp2'])), '02x') +
                                           format(int(float(values['max_temp_air'])), '02x') +
-                                          format(int(abs(values['iakb1']*10)), '02x') +
-                                          format(int(abs((values['u_akb_max']*4 - _u_akb4)*10)), '02x') +
-                                          format(int(abs(values['uload']*10)), '04x') +
+                                          format(int(abs(values['iakb1'] * 10)), '04x') +
+                                          format(int(abs((values['u_akb_max'] * 4 - _u_akb4) * 10)), '02x') +
+                                          format(int(abs(values['uload'] * 10)), '04x') +
                                           format(int(IAKB1_0), '04x')
                                           )
         except ValueError as _err:
@@ -351,7 +378,7 @@ def get_stm_status(values):
                               f"{values['i_load_max']}, {values['u_akb_max']}, {values['u_abc_max']},"
                               f"{values['i_charge_max']}, {values['k_u_akb']}, {values['k_i_akb']},"
                               f"{values['t_delay']}, {values['temp2']}, {values['max_temp_air']},"
-                              f"{values['iakb1']}, {values['u_akb_max']*4 - _u_akb4}, {values['uload']}")
+                              f"{values['iakb1']}, {values['u_akb_max'] * 4 - _u_akb4}, {values['uload']}")
         else:
             to_status_log(msg=f"-=-To STM-=-\n{str(list(s_out))}")
             to_log(str(list(s_out)))
@@ -359,8 +386,8 @@ def get_stm_status(values):
         finally:
             to_log(f"U_akb_max={in_buf[20]}; "
                    f"Uakb4={(in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
-                   f"d_uakb={in_buf[18]/10:.1f}; u_load_abc={(in_buf[46] * 256 + in_buf[47])/80:.1f}; "
-                   f"d_iakb={in_buf[19]/10:.1f}; E0_{format(in_buf[1], '02x').upper()}; {hex(in_buf[2])[2:].upper()}")
+                   f"d_uakb={in_buf[18] / 10:.1f}; u_load_abc={(in_buf[46] * 256 + in_buf[47]) / 80:.1f}; "
+                   f"d_iakb={in_buf[19] / 10:.1f}; E0_{format(in_buf[1], '02x').upper()}; {hex(in_buf[2])[2:].upper()}")
     # s.close()
 
 
@@ -404,7 +431,7 @@ def menu(values):
                     values['menu_4_0'] = f'I load max:;{values["i_load_max"]:15}A'
                 if values["submenu"] == 1 and values["i_charge_max"] < 20:
                     values["i_charge_max"] += 1
-                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10:14}Ah'
+                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"] * 10:14}Ah'
                     values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
                 if values["submenu"] == 2 and values["discharge_depth"] < 90:
                     values["discharge_depth"] += 10
@@ -438,8 +465,8 @@ def menu(values):
                     values['menu_4_0'] = f'I load max:;{values["i_load_max"]:15}A'
                 if values["submenu"] == 1 and values["i_charge_max"] > 4:
                     values["i_charge_max"] -= 1
-                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"]*10:14}Ah'
-                    values['menu_3_1'] = f'Q={values["i_charge_max"]*10:5} Ah;T={values["temp1"]:5.1f} C'
+                    values['menu_4_1'] = f'Capacity:;{values["i_charge_max"] * 10:14}Ah'
+                    values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
                 if values["submenu"] == 2 and values["discharge_depth"] > 30:
                     values["discharge_depth"] -= 10
                     values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]:15}%'
@@ -491,7 +518,7 @@ def press(values):
                     if values['submenu'] == 1:
                         _conn.execute('UPDATE ups_settings SET i_charge_max = ? WHERE id =1',
                                       (str(values["i_charge_max"]),))
-                        to_human_log(msg=f'LCD: Уставку "Емкость АКБ" изменили на {values["i_charge_max"]*10}Ah')
+                        to_human_log(msg=f'LCD: Уставку "Емкость АКБ" изменили на {values["i_charge_max"] * 10}Ah')
                     if values['submenu'] == 2:
                         _conn.execute('UPDATE ups_settings SET discharge_depth = ? WHERE id =1',
                                       (str(values["discharge_depth"]),))
@@ -549,13 +576,13 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.10'
-K_U1 = 1.278
-K_U2 = 1.208
-K_U3 = 1.189
-K_U4 = 1.016
-K_I1 = 23.2
-IAKB1_0 = 1487
+MCU_VERSION = 'mcu.1.11'
+K_U1 = 0.904  # 1.278
+K_U2 = 0.906  # 1.208
+K_U3 = 0.899  # 1.189
+K_U4 = 0.906  # 1.016
+K_I1 = 16.2
+IAKB1_0 = 1907
 START_CURL_SH = ["/usr/bin/python3 /home/microlink/STM_loader.py &> /home/microlink/stdout_file.txt\n",
                  "IPV4=$(/bin/sed -n '1{p;q;}' /home/microlink/ip_cur)\n",
                  "MASKV4=$(/bin/sed -n '2{p;q;}' /home/microlink/ip_cur)\n",
@@ -644,9 +671,9 @@ status_values['menu_2_0'] = f'I1={status_values["iinv1"]} I2={status_values["iin
 status_values['menu_2_1'] = f'UA={status_values["ua"]} UB={status_values["ub"]};UC={status_values["uc"]}'
 status_values['menu_3_0'] = f'U1={status_values["uakb1"]} U2={status_values["uakb2"]};U3={status_values["uakb3"]} ' \
                             f'U4={status_values["uakb4"]}'
-status_values['menu_3_1'] = f'Q={status_values["i_charge_max"]*10:5} Ah;T={status_values["temp1"]:5.1f} C'
+status_values['menu_3_1'] = f'Q={status_values["i_charge_max"] * 10:5} Ah;T={status_values["temp1"]:5.1f} C'
 status_values['menu_4_0'] = f'I load max:;{status_values["i_load_max"]:15}A'
-status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"]*10:14}Ah'
+status_values['menu_4_1'] = f'Capacity:;{status_values["i_charge_max"] * 10:14}Ah'
 status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]:15}%'
 status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]:15}V'
 status_values['menu_4_4'] = f'Max temperature:;{status_values["max_temp_air"]:15}C'
@@ -687,15 +714,19 @@ E_DELAY = 0.0005
 
 # Open I2C interface
 bus = smbus.SMBus(0)
-stm_reset = digitalio.DigitalInOut(board.pin.PC3)
-stm_reset.direction = digitalio.Direction.OUTPUT
-stm_reset.value = False
-stm_boot = digitalio.DigitalInOut(board.pin.PG8)
-stm_boot.direction = digitalio.Direction.OUTPUT
-stm_boot.value = False
-stm_reset.value = True
-time.sleep(1)
-stm_reset.value = False
+try:
+    stm_reset = digitalio.DigitalInOut(board.pin.PC3)
+    stm_reset.direction = digitalio.Direction.OUTPUT
+    stm_reset.value = False
+    stm_boot = digitalio.DigitalInOut(board.pin.PG8)
+    stm_boot.direction = digitalio.Direction.OUTPUT
+    stm_boot.value = False
+    stm_reset.value = True
+    time.sleep(1)
+    stm_reset.value = False
+except OSError as _err:
+    to_human_log(msg='Сбой инициализации ARM')
+    to_log(msg=f'Сбой инициализации ARM - {_err}')
 to_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_status_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_human_log(msg=f'Прибор включили, веб-сервис запущен в {datetime.now()}')
@@ -827,7 +858,7 @@ def index():
             return {
                 'status': 'ok',
                 'discharge_depth': status_values['discharge_depth'],
-                'q_akb': status_values["i_charge_max"]*10,
+                'q_akb': status_values["i_charge_max"] * 10,
                 'u_abc_max': status_values['u_abc_max'],
                 'i_load_max': status_values['i_load_max'],
                 'max_temp_air': status_values['max_temp_air'],
@@ -900,7 +931,7 @@ def index():
             }
         if json_data['action'] == 'update':
             if json_data['status_values'] == 'q_akb':
-                status_values["i_charge_max"] = int(json_data['value']/10)
+                status_values["i_charge_max"] = int(json_data['value'] / 10)
                 to_human_log(msg=f'Web: Уставку "Емкость АКБ" изменили на {status_values["i_charge_max"]}')
                 _conn = get_db_connection()
                 _conn.execute(f"UPDATE ups_settings SET i_charge_max = ? WHERE id =1",
@@ -939,7 +970,6 @@ def index():
                 cur_f.writelines([f"{status_values['ip_addr']}\n", f"{status_values['ip_mask']}\n",
                                   f"{status_values['ip_gate']}\n"])
     return render_template("index.html")
-
 
 # sudo /bin/sed -i 's/address.*/address 192.168.1.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.1.111/' /etc/network/interfaces
 # sudo /bin/sed -i 's/address.*/address 192.168.8.52/; s/netmask.*/netmask 255.255.255.0/; s/gateway.*/gateway 192.168.8.1/' /etc/network/interfaces

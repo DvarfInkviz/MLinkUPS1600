@@ -265,7 +265,7 @@ sudo nano /etc/hostname
 ===== d. прописать RTC1 в ПК
 sudo -s
 sudo modprobe rtc-ds3232
-echo ds3232 0x68 > /sys/class/i2c-adapter/i2c-2/new_device
+echo ds3232 0x68 > /sys/class/i2c-adapter/i2c-0/new_device
 ===== e. проверить время
 date
 !!! если время неправильное, то подключить ПК к интернету и выполнить команду:

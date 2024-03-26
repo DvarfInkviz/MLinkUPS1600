@@ -23,7 +23,7 @@
 # pip install Adafruit-Blinka --break-system-packages // v8.20.1
 # sudo apt-get -y install python3-libgpiod
 # sudo armbian-config
-# > System > Hardware > check UART1, i2c-0, i2c-2, w1-gpio
+# > System > Hardware > check UART1, i2c-0, w1-gpio
 #!!! You don't need to install sqlite3 module. It is included in the standard library (since Python 2.5).
 
 
@@ -53,7 +53,7 @@ sudo nano /boot/armbianEnv.txt
   bootlogo=false
   console=serial
   overlay_prefix=sun8i-h3
-  overlays=i2c0 i2c2 uart1 w1-gpio
+  overlays=i2c0 uart1 w1-gpio
   param_w1_pin=PG11
   rootdev=UUID=db65add1-8f7b-4ccd-8899-5abed7841b10
   rootfstype=ext4
@@ -81,7 +81,6 @@ sudo vi /etc/sysctl.conf
 sudo sysctl -p
 ===== d. Настройка прав для работы с переферией
 sudo chmod 666 /dev/i2c-0
-sudo chmod 666 /dev/i2c-2
 sudo addgroup gpio
 sudo adduser www-data gpio
 sudo adduser www-data i2c
@@ -89,7 +88,6 @@ sudo nano /etc/udev/rules.d/99-com.rules
   vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
   SUBSYSTEM=="i2c-dev", GROUP="i2c", MODE="666"
   KERNEL=="i2c-0"     , GROUP="i2c" , MODE="666"
-  KERNEL=="i2c-2"     , GROUP="i2c" , MODE="666"
   SUBSYSTEM=="gpio*", GROUP="gpio", MODE="666"
   =================================
 sudo nano /etc/sudoers
@@ -154,7 +152,8 @@ sudo systemctl reload apache2
 
 =================== V. карусель логов
 sudo crontab -e
-0 * * * * find /var/www/web-ups1600/logs/ -name "*.log" -type f -size +100M -mtime +30 -delete
+0 * * * * find /var/www/web-ups1600/logs/ -name "*.log" -type f -mtime +30 -delete
+0 * * * * find /var/www/web-ups1600/logs/ -name "*.log" -type f -size +50M -delete
 
 =================== VI. Организация автозапуска app.py
 nano start_curl.sh
@@ -262,6 +261,7 @@ sudo nano /etc/hostname
   vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
   mlink-ups-92a7
   =================================
+sudo hostnamectl set-hostname mlink-ups-92a7
 ===== d. прописать RTC1 в ПК
 sudo -s
 sudo modprobe rtc-ds3232

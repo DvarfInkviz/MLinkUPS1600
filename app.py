@@ -123,7 +123,7 @@ def update_temp(values):
         values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
         cnt1_error = 0
     except IndexError as _err:
-        values['temp1'] = 0
+        values['temp1'] = -1
         to_status_log(msg=f'Temp1_error: {_err}')
         values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T= n/a C'
         if cnt1_error < 3:
@@ -131,12 +131,14 @@ def update_temp(values):
             cnt1_error += 1
     except SensorNotReadyError:
         values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T= n/a C'
+        values['temp1'] = -1
         to_status_log(msg=f'Temp1_error: is not ready to read')
         if cnt1_error < 3:
             to_human_log(msg='Датчик температуры на АКБ не готов к чтению!')
             cnt1_error += 1
     except NoSensorFoundError:
         values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T= n/a C'
+        values['temp1'] = -1
         to_status_log(msg=f'Temp1_error: Could not find sensor of type DS18B20')
         if cnt1_error < 3:
             to_human_log(msg='Датчик температуры на АКБ вышел из строя!')
@@ -146,20 +148,27 @@ def update_temp(values):
         cnt2_error = 0
     except IndexError as _err:
         to_status_log(msg=f'Temp2_error: {_err}')
-        values['temp2'] = 0
+        values['temp2'] = -1
         if cnt2_error < 3:
             to_human_log(msg='Датчик температуры в шкафу не подключен!')
             cnt2_error += 1
     except SensorNotReadyError:
         to_status_log(msg=f'Temp2_error: is not ready to read')
+        values['temp2'] = -1
         if cnt2_error < 3:
             to_human_log(msg='Датчик температуры в шкафу не готов к чтению!')
             cnt2_error += 1
     except NoSensorFoundError:
         to_status_log(msg=f'Temp2_error: Could not find sensor of type DS18B20')
+        values['temp2'] = -1
         if cnt2_error < 3:
             to_human_log(msg='Датчик температуры в шкафу вышел из строя!')
             cnt2_error += 1
+    if values['temp1'] == -1 or values['temp2'] == -1:
+        status_values['w1temp'] = W1ThermSensor.get_available_sensors()
+        for _i in range(0, len(status_values['w1temp'])):
+            status_values[f'temp{_i + 1}_id'] = status_values['w1temp'][_i].id
+            status_values[f'temp{_i + 1}'] = status_values['w1temp'][_i].get_temperature()
 
 
 def get_error_status(cur, old):
@@ -331,13 +340,14 @@ def get_stm_status(values):
                                  f'U4={values["uakb4"]:.1f}'
             values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
             if values['temp1'] > 20:
-                values['discharge_abc'] = u_akb_dict[40][values['discharge_depth']]
+                values['discharge_abc'] = u_akb_dict[40][100-values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[40][30]
                 values['u_akb_max'] = u_akb_dict[40][100]
             else:
-                values['discharge_abc'] = u_akb_dict[0][values['discharge_depth']]
+                values['discharge_abc'] = u_akb_dict[0][100-values['discharge_depth']]
                 values['discharge_akb'] = u_akb_dict[0][30]
                 values['u_akb_max'] = u_akb_dict[0][100]
+        _temp2 = 0 if values['temp2'] < 0 else values['temp2']
         try:
             if int(abs((values['u_akb_max'] * 4 - _u_akb4) * 10)) > 255:
                 s_out = bytearray.fromhex(format(int(float(values['discharge_abc']) * 10), '02x') +
@@ -349,7 +359,7 @@ def get_stm_status(values):
                                           format(int(float(values['k_u_akb']) * 1000), '04x') +
                                           format(int(float(values['k_i_akb']) * 10), '04x') +
                                           format(int(float(values['t_delay']) / 10), '02x') +
-                                          format(int(float(values['temp2'])), '02x') +
+                                          format(int(float(_temp2)), '02x') +
                                           format(int(float(values['max_temp_air'])), '02x') +
                                           format(int(abs(values['iakb1'] * 10)), '04x') +
                                           format(int(255), '02x') +
@@ -366,7 +376,7 @@ def get_stm_status(values):
                                           format(int(float(values['k_u_akb']) * 1000), '04x') +
                                           format(int(float(values['k_i_akb']) * 10), '04x') +
                                           format(int(float(values['t_delay']) / 10), '02x') +
-                                          format(int(float(values['temp2'])), '02x') +
+                                          format(int(float(_temp2)), '02x') +
                                           format(int(float(values['max_temp_air'])), '02x') +
                                           format(int(abs(values['iakb1'] * 10)), '04x') +
                                           format(int(abs((values['u_akb_max'] * 4 - _u_akb4) * 10)), '02x') +
@@ -433,7 +443,7 @@ def menu(values):
                     values["i_charge_max"] += 1
                     values['menu_4_1'] = f'Capacity:;{values["i_charge_max"] * 10:14}Ah'
                     values['menu_3_1'] = f'Q={values["i_charge_max"] * 10:5} Ah;T={values["temp1"]:5.1f} C'
-                if values["submenu"] == 2 and values["discharge_depth"] < 90:
+                if values["submenu"] == 2 and values["discharge_depth"] < 70:
                     values["discharge_depth"] += 10
                     values['menu_4_2'] = f'Discharge depth:;{values["discharge_depth"]:15}%'
                 if values["submenu"] == 3 and values["u_abc_max"] < 55:
@@ -560,8 +570,10 @@ def press(values):
 
 
 def lcd_time(values):
-    values['menu_0_0'] = f'M-Link UPS 1600;{datetime.now().strftime("%H:%M %d.%m.%Y")}'
+    values['menu_0_0'] = f'U={status_values["uload"]:.1f}V I={status_values["iload"]:.2f}A;' \
+                         f'{datetime.now().strftime("%H:%M %d.%m.%Y")}'
     if values["menu"] == values["submenu"] == 0:
+        lcd_string(values[f'menu_0_0'].split(sep=';')[0], LCD_LINE_1)
         lcd_string(values[f'menu_0_0'].split(sep=';')[1], LCD_LINE_2)
 
 
@@ -576,13 +588,13 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.11'
-K_U1 = 0.904  # 1.278
-K_U2 = 0.906  # 1.208
-K_U3 = 0.899  # 1.189
-K_U4 = 0.906  # 1.016
+MCU_VERSION = 'mcu.1.13'
+K_U1 = 0.969  # 1.278
+K_U2 = 0.923  # 1.208
+K_U3 = 0.916  # 1.189
+K_U4 = 0.909  # 1.016
 K_I1 = 16.2
-IAKB1_0 = 1907
+IAKB1_0 = 1877
 START_CURL_SH = ["/usr/bin/python3 /home/microlink/STM_loader.py &> /home/microlink/stdout_file.txt\n",
                  "IPV4=$(/bin/sed -n '1{p;q;}' /home/microlink/ip_cur)\n",
                  "MASKV4=$(/bin/sed -n '2{p;q;}' /home/microlink/ip_cur)\n",
@@ -654,9 +666,11 @@ status_values = {'iakb1': 0, 'uakb1': 0, 'uakb2': 0, 'uakb3': 0, 'uakb4': 0, 'ua
                  'menu_0_4': 'Settings      >>; ', 'sub_cnt4': 4,
                  'menu_0_5': 'IP address:; ', 'sub_cnt5': 0,
                  'menu_0_6': f'Operating up;time {up_time:10.1f}h', 'discharge_depth': int(ups_set[9]), 'sub_cnt6': 0,
-                 'menu_0_7': f'Version:;', 'menu_0_8': f'Update process..;Step 1 - wait...', 'sub_cnt7': 0,
+                 'menu_0_7': f'Version:;arm.--, {MCU_VERSION}',
+                 'menu_0_8': f'Update process..;Step 1 - wait...', 'sub_cnt7': 0,
                  'max_temp_air': int(ups_set[10]), 'ip_addr': '192.168.1.10', 'ip_mask': '255.255.255.0',
                  'ip_gate': '192.168.1.1', 'version': '0.0'}
+
 # u_load_max TEXT DEFAULT '4000',    1
 # i_load_max TEXT DEFAULT '90'       2
 # t_charge_max TEXT DEFAULT '20',    3
@@ -737,11 +751,9 @@ with open(f"/etc/timezone", 'r') as tz_f:
     _time = tz_f.readline()
 status_values['tz'] = _time[8:-1]
 status_values['w1temp'] = W1ThermSensor.get_available_sensors()
-if len(status_values['w1temp']) == 2:
-    status_values['temp1_id'] = status_values['w1temp'][0].id
-    status_values['temp2_id'] = status_values['w1temp'][1].id
-    status_values['temp1'] = status_values['w1temp'][0].get_temperature()
-    status_values['temp2'] = status_values['w1temp'][1].get_temperature()
+for _i in range(0, len(status_values['w1temp'])):
+    status_values[f'temp{_i+1}_id'] = status_values['w1temp'][_i].id
+    status_values[f'temp{_i+1}'] = status_values['w1temp'][_i].get_temperature()
 if scheduler.get_job(job_id='get_stm_status') is None:
     to_status_log(msg='Start working with stm')
     scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
@@ -764,20 +776,20 @@ else:
     scheduler.add_job(func=press, args=[status_values], id='press', trigger='interval', seconds=1, coalesce=True,
                       replace_existing=False)
 if scheduler.get_job(job_id='lcd_time') is None:
-    scheduler.add_job(func=lcd_time, args=[status_values], id='lcd_time', trigger='interval', seconds=29,
+    scheduler.add_job(func=lcd_time, args=[status_values], id='lcd_time', trigger='interval', seconds=15,
                       replace_existing=True)
 else:
     scheduler.remove_job(job_id='lcd_time')
     time.sleep(0.2)
-    scheduler.add_job(func=lcd_time, args=[status_values], id='lcd_time', trigger='interval', seconds=29,
+    scheduler.add_job(func=lcd_time, args=[status_values], id='lcd_time', trigger='interval', seconds=15,
                       replace_existing=True)
 if scheduler.get_job(job_id='update_temp') is None:
-    scheduler.add_job(func=update_temp, args=[status_values], id='update_temp', trigger='interval', seconds=60,
+    scheduler.add_job(func=update_temp, args=[status_values], id='update_temp', trigger='interval', seconds=32,
                       replace_existing=True)
 else:
     scheduler.remove_job(job_id='update_temp')
     time.sleep(0.2)
-    scheduler.add_job(func=update_temp, args=[status_values], id='update_temp', trigger='interval', seconds=29,
+    scheduler.add_job(func=update_temp, args=[status_values], id='update_temp', trigger='interval', seconds=32,
                       replace_existing=True)
 
 
@@ -806,6 +818,8 @@ def index():
             with open(f"/proc/uptime", 'r') as up_f:
                 with open(f"/home/microlink/up_cur", 'w') as cur_f:
                     cur_f.write(up_f.readline().split(sep=' ')[0])
+            _temp1 = "---" if status_values["temp1"] == -1 else f'{status_values["temp1"]:.1f}'
+            _temp2 = "---" if status_values["temp2"] == -1 else f'{status_values["temp2"]:.1f}'
             return {
                 'connection': 'on',
                 'err': status_values['err'],
@@ -841,8 +855,8 @@ def index():
                 'iinv1': f'{status_values["iinv1"]:.1f}',
                 'iinv2': f'{status_values["iinv2"]:.1f}',
                 'iinv3': f'{status_values["iinv3"]:.1f}',
-                'temp_akb': f'{status_values["temp1"]:.1f}',
-                'temp_air': f'{status_values["temp2"]:.1f}',
+                'temp_akb': _temp1,
+                'temp_air': _temp2,
                 'temp_cpu': f'{soc_t:.1f}',
                 't_charge_mode': f'{status_values["t_charge_mode"]}'
             }

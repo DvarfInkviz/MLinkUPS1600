@@ -62,7 +62,7 @@ function setPageTime() {
 // UPDATE STATUS //
 var s_status;
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => { setInterval(request_status, 800); }, 300);
+    setTimeout(() => { setInterval(request_status, 930); }, 1000);
               });
 function request_status() {
     fetch('/index', {
@@ -307,8 +307,8 @@ function check_input(el) {
     }
     if (el.id == 'discharge_depth') {
         if (parseFloat(text) <= 30) {text = '3';}
-        if (parseFloat(text) >= 90) {text = '9';}
-        if ((parseFloat(text) > 30)&&(parseFloat(text) < 90)) {text = text + '%';}
+        if (parseFloat(text) >= 70) {text = '7';}
+        if ((parseFloat(text) > 30)&&(parseFloat(text) < 70)) {text = text + '%';}
         else {text = text + '0%';}
     }
     if (el.id == 'u_abc_max') {

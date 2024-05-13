@@ -270,6 +270,7 @@ echo ds3232 0x68 > /sys/class/i2c-adapter/i2c-0/new_device
 date
 !!! если время неправильное, то подключить ПК к интернету и выполнить команду:
 sudo date -s "$(curl -s --head http://google.com | grep ^Date: | sed 's/Date: //g')"
+sudo date --set="4/8/2024 11:50:00"
 ===== f. записать время в RTC1
 hwclock --systohc -f /dev/rtc1
 hwclock -r -f /dev/rtc1

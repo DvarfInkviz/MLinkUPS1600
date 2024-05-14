@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if(response.ok) {
             response.json()
             .then(function(response) {
-                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2023, '+ response.version;
+                document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2024, '+ response.version;
             })
         }
     })
@@ -79,6 +79,7 @@ function request_status() {
             response.json()
             .then(function(response) {
                 if (response.connection == 'on') {
+                    document.getElementById('version').textContent = 'Микролинк-связь ООО \u00A9 \u00AE, 2024, '+ response.version;
                     switch (response.state) {
                         case '0':
                             switch (response.status) {
@@ -127,6 +128,9 @@ function request_status() {
                                 case 128:
                                     s_status = "Критическая ошибка - перегрев АКБ!";
                                     break;
+                                case 666:
+                                    s_status = "Модуль прибора ARM не отвечает!";
+                                    break;
                                 default:
                                     s_status = "Неизвестная критическая ошибка - Code#" + response.err;
                             }
@@ -171,42 +175,57 @@ function request_status() {
                     document.getElementById('dry2_out').classList.toggle('rele_out_up', response.dry2_out);
                     document.getElementById('dry3_out').classList.toggle('rele_out_up', response.dry3_out);
                     document.getElementById('dry4_out').classList.toggle('rele_out_up', response.dry4_out);
-                    if (response.bv1_status == 'ok') {
-                        document.getElementById('bv1_status').classList.toggle('alerts-border', 0);
-                        document.getElementById('bv1_status').style.background = '#3f3';
-                    }
-                    if (response.bv2_status == 'ok') {
-                        document.getElementById('bv2_status').classList.toggle('alerts-border', 0);
-                        document.getElementById('bv2_status').style.background = '#3f3';
-                    }
-                    if (response.bv3_status == 'ok') {
-                        document.getElementById('bv3_status').classList.toggle('alerts-border', 0);
-                        document.getElementById('bv3_status').style.background = '#3f3';
-                    }
-                    if (response.bv1_status == 'alarm') {
-                        document.getElementById('bv1_status').classList.toggle('alerts-border', 1);
-                        document.getElementById('bv1_status').style.background = '#3f3';
-                    }
-                    if (response.bv2_status == 'alarm') {
-                        document.getElementById('bv2_status').classList.toggle('alerts-border', 1);
-                        document.getElementById('bv2_status').style.background = '#3f3';
-                    }
-                    if (response.bv3_status == 'alarm') {
-                        document.getElementById('bv3_status').classList.toggle('alerts-border', 1);
-                        document.getElementById('bv3_status').style.background = '#3f3';
-                    }
-                    if (response.bv1_status == 'error') {
-                        document.getElementById('bv1_status').classList.toggle('alerts-border', 1);
-                        document.getElementById('bv1_status').style.background = '#999';
-                    }
-                    if (response.bv2_status == 'error') {
-                        document.getElementById('bv2_status').classList.toggle('alerts-border', 1);
-                        document.getElementById('bv2_status').style.background = '#999';
-                    }
-                    if (response.bv3_status == 'error') {
-                        document.getElementById('bv3_status').classList.toggle('alerts-border', 1);
-                        document.getElementById('bv3_status').style.background = '#999';
-                    }
+                    switch (response.bv1_status) {
+                        case 'ok':
+                            document.getElementById('bv1_status').classList.toggle('alerts-border', 0);
+                            document.getElementById('bv1_status').style.background = '#3f3';
+                            break;
+                        case 'alarm':
+                            document.getElementById('bv1_status').classList.toggle('alerts-border', 1);
+                            document.getElementById('bv1_status').style.background = '#3f3';
+                            break;
+                        case 'error':
+                            document.getElementById('bv1_status').classList.toggle('alerts-border', 1);
+                            document.getElementById('bv1_status').style.background = '#999';
+                            break;
+                        default:
+                            document.getElementById('bv1_status').classList.toggle('alerts-border', 0);
+                            document.getElementById('bv1_status').style.background = '#999';
+                        }
+                    switch (response.bv2_status) {
+                        case 'ok':
+                            document.getElementById('bv2_status').classList.toggle('alerts-border', 0);
+                            document.getElementById('bv2_status').style.background = '#3f3';
+                            break;
+                        case 'alarm':
+                            document.getElementById('bv2_status').classList.toggle('alerts-border', 1);
+                            document.getElementById('bv2_status').style.background = '#3f3';
+                            break;
+                        case 'error':
+                            document.getElementById('bv2_status').classList.toggle('alerts-border', 1);
+                            document.getElementById('bv2_status').style.background = '#999';
+                            break;
+                        default:
+                            document.getElementById('bv2_status').classList.toggle('alerts-border', 0);
+                            document.getElementById('bv2_status').style.background = '#999';
+                        }
+                    switch (response.bv3_status) {
+                        case 'ok':
+                            document.getElementById('bv3_status').classList.toggle('alerts-border', 0);
+                            document.getElementById('bv3_status').style.background = '#3f3';
+                            break;
+                        case 'alarm':
+                            document.getElementById('bv3_status').classList.toggle('alerts-border', 1);
+                            document.getElementById('bv3_status').style.background = '#3f3';
+                            break;
+                        case 'error':
+                            document.getElementById('bv3_status').classList.toggle('alerts-border', 1);
+                            document.getElementById('bv3_status').style.background = '#999';
+                            break;
+                        default:
+                            document.getElementById('bv3_status').classList.toggle('alerts-border', 0);
+                            document.getElementById('bv3_status').style.background = '#999';
+                        }
                 }
             });
         }
@@ -235,7 +254,16 @@ function show_fieldset(number) {
         else {
             document.getElementById('fs_'+i).style.visibility = 'visible';
             document.getElementById('fs_'+i).style.zIndex = '100';
+            if (i == 0) {
+                document.getElementById('bv1_status').classList.toggle('alerts-border', 0);
+                document.getElementById('bv1_status').style.background = '#999';
+                document.getElementById('bv2_status').classList.toggle('alerts-border', 0);
+                document.getElementById('bv2_status').style.background = '#999';
+                document.getElementById('bv3_status').classList.toggle('alerts-border', 0);
+                document.getElementById('bv3_status').style.background = '#999';
+            }
             if (i == 1) {
+                spinner.init();
                 fetch('/index', {
                     headers : {
                         'Content-Type' : 'application/json'
@@ -251,6 +279,7 @@ function show_fieldset(number) {
                         .then(function(response) {
                             if (response.status == 'ok') {
                                 journal.init(response.journal);
+                                close_popup();
                             }
                         })
                     }
@@ -283,6 +312,11 @@ function show_fieldset(number) {
                                 document.getElementById('ip_mac').value = response.ip_mac;
                                 document.getElementById('utctime').value = response.datetime;
                                 document.getElementById('btn_reboot').style.visibility = 'hidden';
+                                document.getElementById('btn_discharge_depth').style.visibility = 'hidden';
+                                document.getElementById('btn_i_load_max').style.visibility = 'hidden';
+                                document.getElementById('btn_q_akb').style.visibility = 'hidden';
+                                document.getElementById('btn_u_abc_max').style.visibility = 'hidden';
+                                document.getElementById('btn_max_temp_air').style.visibility = 'hidden';
                             }
                         })
                     }
@@ -291,13 +325,18 @@ function show_fieldset(number) {
         }
     }
 }
-var ip4, gate4, mask4;
+var ip4, gate4, mask4, discharge_depth, i_load_max, q_akb, u_abc_max, max_temp_air;
 function rem(el) {
     if (el.id == 'ip_addr') {ip4 = el.value}
     if (el.id == 'ip_mask') {mask4 = el.value}
     if (el.id == 'ip_gate') {gate4 = el.value}
+    if (el.id == 'discharge_depth') {discharge_depth = el.value}
+    if (el.id == 'i_load_max') {i_load_max = el.value}
+    if (el.id == 'q_akb') {q_akb = el.value}
+    if (el.id == 'u_abc_max') {u_abc_max = el.value}
+    if (el.id == 'max_temp_air') {max_temp_air = el.value}
 }
-function check_input(el) {
+function check_output(el) {
     let text = el.value.substring(0, 2);
     while (text.indexOf('_') >= 0) {text = text.replace('_', '0');}
     if (el.id == 'i_load_max') {
@@ -327,6 +366,49 @@ function check_input(el) {
         text = text + '\u00B0C';
     }
     el.value = text;
+    if ((el.id == 'i_load_max')&&(i_load_max != el.value)) {
+        document.getElementById('btn_i_load_max').style.visibility = 'visible';
+        document.getElementById('btn_i_load_max').style.width = '15%';
+        i_load_max = el.value;}
+    if ((el.id == 'discharge_depth')&&(discharge_depth != el.value)) {
+        document.getElementById('btn_discharge_depth').style.visibility = 'visible';
+        document.getElementById('btn_discharge_depth').style.width = '15%';
+        discharge_depth = el.value;}
+    if ((el.id == 'u_abc_max')&&(u_abc_max != el.value)) {
+        document.getElementById('btn_u_abc_max').style.visibility = 'visible';
+        document.getElementById('btn_u_abc_max').style.width = '15%';
+        u_abc_max = el.value;}
+    if ((el.id == 'q_akb')&&(q_akb != el.value)) {
+        document.getElementById('btn_q_akb').style.visibility = 'visible';
+        document.getElementById('btn_q_akb').style.width = '15%';
+        q_akb = el.value;}
+    if ((el.id == 'max_temp_air')&&(max_temp_air != el.value)) {
+        document.getElementById('btn_max_temp_air').style.visibility = 'visible';
+        document.getElementById('btn_max_temp_air').style.width = '15%';
+        max_temp_air = el.value;}
+}
+function save_settings(el) {
+    spinner.init();
+    if (el.id == 'btn_i_load_max') {
+        sts = 'i_load_max';
+        val = parseFloat(i_load_max);
+    }
+    if (el.id == 'btn_discharge_depth') {
+        sts = 'discharge_depth';
+        val = parseFloat(discharge_depth);
+    }
+    if (el.id == 'btn_u_abc_max') {
+        sts = 'u_abc_max';
+        val = parseFloat(u_abc_max);
+    }
+    if (el.id == 'btn_q_akb') {
+        sts = 'q_akb';
+        val = parseFloat(q_akb);
+    }
+    if (el.id == 'btn_max_temp_air') {
+        sts = 'max_temp_air';
+        val = parseFloat(max_temp_air);
+    }
     fetch('/index', {
         headers : {
             'Content-Type' : 'application/json'
@@ -334,10 +416,28 @@ function check_input(el) {
         method : 'POST',
         body : JSON.stringify( {
             'action' : 'update',
-            'status_values': el.id,
-            'value' : parseFloat(text),
+            'status_values': sts,
+            'value' : val,
         })
     })
+    .then(function (response){
+        if(response.ok) {
+            response.json()
+            .then(function(response) {
+                if (response.status == 'update_ok') {
+                    setTimeout(close_popup, 1000);
+                    document.getElementById(el.id).style.visibility = 'hidden';
+                }
+            })
+        }
+        else {
+            throw Error('Something went wrong');
+        }
+    })
+    .catch(function(error) {
+        console.log(error);
+        close_popup();
+    });
 }
 function send_time(el){
     fetch('/index', {
@@ -390,17 +490,6 @@ function check_input_ip(el) {
     if ((el.id == 'ip_addr')&&(ip4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
     if ((el.id == 'ip_mask')&&(mask4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
     if ((el.id == 'ip_gate')&&(gate4 != el.value)) {document.getElementById('btn_reboot').style.visibility = 'visible';}
-//    fetch('/index', {
-//        headers : {
-//            'Content-Type' : 'application/json'
-//        },
-//        method : 'POST',
-//        body : JSON.stringify( {
-//            'action' : 'update_ip',
-//            'status_values': el.id,
-//            'value' : text,
-//        })
-//    })
 }
 // ----- /
 const handleImageUpload = event => {

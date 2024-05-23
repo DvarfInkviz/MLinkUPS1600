@@ -214,9 +214,26 @@ def get_inv_error(err, _id):
     return err
 
 
+def reset_stm32():
+    global stm_reset
+    try:
+        stm_reset = digitalio.DigitalInOut(board.pin.PC3)
+        stm_reset.direction = digitalio.Direction.OUTPUT
+        stm_reset.value = False
+        stm_boot = digitalio.DigitalInOut(board.pin.PG8)
+        stm_boot.direction = digitalio.Direction.OUTPUT
+        stm_boot.value = False
+        stm_reset.value = True
+        time.sleep(1)
+        stm_reset.value = False
+    except OSError as _err:
+        # to_human_log(msg='Сбой инициализации ARM')
+        to_log(msg=f'Сбой инициализации boot, reset STM pins - {_err}')
+
+
 def get_stm_status(values):
     s = serial.Serial(port=serialPort, baudrate=serialBaud, bytesize=dataNumBytes, parity='N', stopbits=1,
-                      xonxoff=False, rtscts=False, dsrdtr=False)
+                      xonxoff=False, rtscts=False, dsrdtr=False, timeout=5)
     # to_status_log(msg=f"open port {s.name}")
     if not s.is_open:
         s.open()
@@ -226,12 +243,24 @@ def get_stm_status(values):
     _m = 0
     _m_list = [{}, {}, {}, {}, {}, {}]
     _first = True
+    _sync = False
     while s.is_open:
-        rs_buf = list(s.read(size=54))
+        sync_byte = 0
+        while not _sync:
+            _one_byte = list(s.read())
+            to_log(msg=f"000 sync... {sync_byte} > read: {_one_byte}")
+            if len(_one_byte) >= 0:
+                sync_byte += 1 if _one_byte[0] == 27 else 0
+            else:
+                reset_stm32()
+            _sync = True if sync_byte == 3 else False
+        len_buf = 51 if sync_byte == 3 else 54
+        rs_buf = s.read(size=len_buf)
+        in_buf = list(rs_buf)[3:] if len_buf == 54 else list(rs_buf)
+        to_log(msg=f"111 IN_DATA >> {str(list(rs_buf))}")
         _u_akb4 = 0
-        if (len(rs_buf) == 54) and (rs_buf[0] == rs_buf[1] == rs_buf[2] == 27):
+        if len(in_buf) == 51:
             values['stm'] = 'ok'
-            in_buf = rs_buf[3:]
             to_status_log(msg=f"-=-From STM-=-\nErr:{str(in_buf[:2])},"
                               f"Status:{str(in_buf[2])},"
                               f"ADC:{str(in_buf[3:20])},"
@@ -395,16 +424,16 @@ def get_stm_status(values):
                                   f"{values['iakb1']}, {values['u_akb_max'] * 4 - _u_akb4}, {values['uload']}")
             else:
                 to_status_log(msg=f"-=-To STM-=-\n{str(list(s_out))}")
-                to_log(str(list(s_out)))
+                to_log(msg=f"222 {str(list(s_out))}")
                 s.write(s_out)
             finally:
-                to_log(f"U_akb_max={in_buf[20]}; "
+                to_log(f"333 U_akb_max={in_buf[20]}; "
                        f"Uakb4={(in_buf[16] * 256 + in_buf[17]) * 3.3 / 4096 * 20 * values['k_u_akb']:.1f}; "
                        f"d_uakb={in_buf[18] / 10:.1f}; u_load_abc={(in_buf[46] * 256 + in_buf[47]) / 80:.1f}; "
                        f"d_iakb={in_buf[19] / 10:.1f}; E0_{format(in_buf[1], '02x').upper()}; "
                        f"{hex(in_buf[2])[2:].upper()}")
         else:
-            to_status_log(msg=f"{str(rs_buf)}")
+            to_status_log(msg=f"{str(in_buf)}")
             to_human_log(msg="Модуль прибора ARM не отвечает!")
             values['stm'] = 'error'
             s_out = bytearray.fromhex(format(int(15000804), '06x') +
@@ -616,7 +645,7 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.14'
+MCU_VERSION = 'mcu.1.15'
 K_U1 = 0.969  # 1.278
 K_U2 = 0.923  # 1.208
 K_U3 = 0.916  # 1.189
@@ -756,19 +785,7 @@ E_DELAY = 0.0005
 
 # Open I2C interface
 bus = smbus.SMBus(0)
-try:
-    stm_reset = digitalio.DigitalInOut(board.pin.PC3)
-    stm_reset.direction = digitalio.Direction.OUTPUT
-    stm_reset.value = False
-    stm_boot = digitalio.DigitalInOut(board.pin.PG8)
-    stm_boot.direction = digitalio.Direction.OUTPUT
-    stm_boot.value = False
-    stm_reset.value = True
-    time.sleep(1)
-    stm_reset.value = False
-except OSError as _err:
-    to_human_log(msg='Сбой инициализации ARM')
-    to_log(msg=f'Сбой инициализации ARM - {_err}')
+reset_stm32()
 to_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_status_log(f'!!!!!!!!App starts at {datetime.now()}')
 to_human_log(msg=f'Прибор включили, веб-сервис запущен в {datetime.now()}')
@@ -825,14 +842,14 @@ else:
 @app.route("/index", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        if 'myFile' in request.files:
-            to_status_log(msg='%%%%%%% Get file!')
-            _f_in = request.files['myFile']
-            _f_in.save(f'/var/www/{PROJECT_NAME}/static/files/upload/stm32.bin')
-            return {
-                'connection': 'on',
-                'file_info': _f_in.filename,
-            }
+        # if 'myFile' in request.files:
+        #     to_status_log(msg='%%%%%%% Get file!')
+        #     _f_in = request.files['myFile']
+        #     _f_in.save(f'/var/www/{PROJECT_NAME}/static/files/upload/stm32.bin')
+        #     return {
+        #         'connection': 'on',
+        #         'file_info': _f_in.filename,
+        #     }
         json_data = request.get_json()
         session['ip_address'] = request.remote_addr
         if json_data['action'] == 'start':
@@ -1000,21 +1017,21 @@ def index():
                 time.sleep(1)
                 os.system("sudo /sbin/reboot")
         #     https://github.com/florisla/stm32loader/tree/master#electrically
-        if json_data['action'] == 'stm32_work':
-            stm_boot.value = False
-            time.sleep(0.5)
-            stm_reset.value = True
-            time.sleep(1)
-            stm_reset.value = False
-            time.sleep(1)
-            if scheduler.get_job(job_id='get_stm_status') is None:
-                to_status_log(msg='Start working with stm')
-                scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
-                                  seconds=1, id='get_stm_status', replace_existing=True)
-            to_human_log(msg=f'ARM обновлен, текущая версия {status_values["version"]}')
-            return {
-                'status': 'STM_work start!',
-            }
+        # if json_data['action'] == 'stm32_work':
+        #     stm_boot.value = False
+        #     time.sleep(0.5)
+        #     stm_reset.value = True
+        #     time.sleep(1)
+        #     stm_reset.value = False
+        #     time.sleep(1)
+        #     if scheduler.get_job(job_id='get_stm_status') is None:
+        #         to_status_log(msg='Start working with stm')
+        #         scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
+        #                           seconds=1, id='get_stm_status', replace_existing=True)
+        #     to_human_log(msg=f'ARM обновлен, текущая версия {status_values["version"]}')
+        #     return {
+        #         'status': 'STM_work start!',
+        #     }
         if json_data['action'] == 'update':
             if json_data['status_values'] == 'q_akb':
                 status_values["i_charge_max"] = int(json_data['value'] / 10)

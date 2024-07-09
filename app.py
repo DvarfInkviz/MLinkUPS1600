@@ -602,6 +602,7 @@ def press(values):
                                          f'на {values["max_temp_air"]}°С')
                     _conn.commit()
                     _conn.close()
+                    os.system(f"sync /var/www/{PROJECT_NAME}/")
                     lcd_byte(LCD_LINE_1, LCD_CMD)  # переход на 1 строку
                     lcd_byte(0x0C, LCD_CMD)  # 001100 нормальный режим работы
                 if not values['edit'] and 0 < values['menu']:
@@ -645,7 +646,7 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.15'
+MCU_VERSION = 'mcu.1.16'
 K_U1 = 0.969  # 1.278
 K_U2 = 0.923  # 1.208
 K_U3 = 0.916  # 1.189
@@ -694,6 +695,7 @@ else:
     up_time = all_time / 3600
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
+conn.close()
 u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
               40: {30: 13.2, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
 err_dict = {4: 'Критическая ошибка - датчик тока вышел из строя!',
@@ -1066,6 +1068,7 @@ def index():
             status_values['menu_4_2'] = f'Discharge depth:;{status_values["discharge_depth"]:15}%'
             status_values['menu_4_3'] = f'U load w/o AKB:;{status_values["u_abc_max"]:15}V'
             status_values['menu_4_4'] = f'Max temperature:;{status_values["max_temp_air"]:15}C'
+            os.system(f"sync /var/www/{PROJECT_NAME}/")
             return {
                 'status': 'update_ok',
             }

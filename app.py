@@ -246,12 +246,33 @@ def get_stm_status(values):
     _sync = False
     while s.is_open:
         sync_byte = 0
+        iter_byte = 0
         while not _sync:
             _one_byte = list(s.read())
-            to_log(msg=f"000 sync... {sync_byte} > read: {_one_byte}")
-            if len(_one_byte) >= 0:
+            if len(_one_byte) >= 1:
+                iter_byte += 1
+                # to_log(msg=f"000 sync... {sync_byte} > read: [{iter_byte}]{_one_byte}")
                 sync_byte += 1 if _one_byte[0] == 27 else 0
             else:
+                iter_byte = 0
+                s_out = bytearray.fromhex(format(int(15000804), '06x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '04x') +
+                                          format(int(0), '04x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '04x') +
+                                          format(int(0), '02x') +
+                                          format(int(0), '04x') +
+                                          format(int(0), '04x')
+                                          )
+                s.write(s_out)
                 reset_stm32()
             _sync = True if sync_byte == 3 else False
         len_buf = 51 if sync_byte == 3 else 54
@@ -454,8 +475,7 @@ def get_stm_status(values):
                                       format(int(0), '04x')
                                       )
             s.write(s_out)
-
-    # s.close()
+        # s.close()
 
 
 def menu(values):
@@ -803,6 +823,7 @@ for _i in range(0, len(status_values['w1temp'])):
     status_values[f'temp{_i + 1}'] = status_values['w1temp'][_i].get_temperature()
 if scheduler.get_job(job_id='get_stm_status') is None:
     to_status_log(msg='Start working with stm')
+    to_log(msg='Start working with stm')
     scheduler.add_job(func=get_stm_status, args=[status_values], trigger='interval',
                       seconds=1, id='get_stm_status', replace_existing=True)
 time.sleep(1)

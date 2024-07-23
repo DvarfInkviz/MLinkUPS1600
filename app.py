@@ -417,7 +417,8 @@ def get_stm_status(values):
                                               format(int(abs(values['iakb1'] * 10)), '04x') +
                                               format(int(255), '02x') +
                                               format(int(abs(values['uload'] * 10)), '04x') +
-                                              format(int(IAKB1_0), '04x')
+                                              format(int(IAKB1_0), '04x') +
+                                              format(int(47 * 4096 / (66 * values['k_u_akb'])), '04x')
                                               )
                 else:
                     s_out = bytearray.fromhex(format(int(15000804), '06x') +
@@ -435,7 +436,8 @@ def get_stm_status(values):
                                               format(int(abs(values['iakb1'] * 10)), '04x') +
                                               format(int(abs((values['u_akb_max'] * 4 - _u_akb4) * 10)), '02x') +
                                               format(int(abs(values['uload'] * 10)), '04x') +
-                                              format(int(IAKB1_0), '04x')
+                                              format(int(IAKB1_0), '04x') +
+                                              format(int(47 * 4096 / (66 * values['k_u_akb'])), '04x')
                                               )
             except ValueError as _err:
                 to_status_log(msg=f"ValueError: {_err}; {values['discharge_abc']}, {values['discharge_akb']}, "
@@ -471,6 +473,7 @@ def get_stm_status(values):
                                       format(int(0), '02x') +
                                       format(int(0), '04x') +
                                       format(int(0), '02x') +
+                                      format(int(0), '04x') +
                                       format(int(0), '04x') +
                                       format(int(0), '04x')
                                       )
@@ -666,13 +669,7 @@ def get_bv_status(u_bv, values):
 
 
 PROJECT_NAME = 'web-ups1600'
-MCU_VERSION = 'mcu.1.16'
-K_U1 = 0.969  # 1.278
-K_U2 = 0.923  # 1.208
-K_U3 = 0.916  # 1.189
-K_U4 = 0.909  # 1.016
-K_I1 = 16.2
-IAKB1_0 = 1877
+MCU_VERSION = 'mcu.1.17'
 START_CURL_SH = ["/usr/bin/python3 /home/microlink/STM_loader.py &> /home/microlink/stdout_file.txt\n",
                  "IPV4=$(/bin/sed -n '1{p;q;}' /home/microlink/ip_cur)\n",
                  "MASKV4=$(/bin/sed -n '2{p;q;}' /home/microlink/ip_cur)\n",
@@ -716,6 +713,12 @@ else:
 conn = get_db_connection()
 ups_set = conn.execute('SELECT * FROM ups_settings WHERE id =1').fetchone()
 conn.close()
+K_U1 = ups_set[11] / 1000
+K_U2 = ups_set[12] / 1000
+K_U3 = ups_set[13] / 1000
+K_U4 = ups_set[14] / 1000
+K_I1 = ups_set[15] / 10
+IAKB1_0 = ups_set[16]
 u_akb_dict = {0: {30: 13, 40: 13.1, 50: 13.2, 60: 13.3, 70: 13.4, 80: 13.4, 90: 13.5, 100: 13.6},
               40: {30: 13.2, 40: 13.3, 50: 13.4, 60: 13.5, 70: 13.6, 80: 13.6, 90: 13.7, 100: 13.8}}
 err_dict = {4: 'Критическая ошибка - датчик тока вышел из строя!',
